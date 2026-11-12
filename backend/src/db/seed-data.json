@@ -1,0 +1,835 @@
+{
+  "$comment": "RetailSync demo catalog. Prices in INR. inventory maps store location name -> units on hand; a location that is omitted does not carry the product. Loaded and validated by backend/src/db/seed-data.ts; upserted by `npm run seed`.",
+  "locations": [
+    {
+      "name": "Bangalore Central",
+      "city": "Bangalore",
+      "address": "MG Road, Bengaluru, Karnataka 560001"
+    },
+    {
+      "name": "Mumbai Metro",
+      "city": "Mumbai",
+      "address": "Senapati Bapat Marg, Lower Parel, Mumbai, Maharashtra 400013"
+    },
+    {
+      "name": "Delhi Hub",
+      "city": "Delhi",
+      "address": "Connaught Place, New Delhi, Delhi 110001"
+    }
+  ],
+  "categories": [
+    {
+      "slug": "electronics",
+      "name": "Electronics"
+    },
+    {
+      "slug": "apparel",
+      "name": "Apparel"
+    },
+    {
+      "slug": "groceries",
+      "name": "Groceries"
+    },
+    {
+      "slug": "home-goods",
+      "name": "Home Goods"
+    },
+    {
+      "slug": "sports-fitness",
+      "name": "Sports & Fitness"
+    },
+    {
+      "slug": "books-stationery",
+      "name": "Books & Stationery"
+    }
+  ],
+  "products": [
+    {
+      "sku": "ELEC-001",
+      "name": "Sony WH-1000XM5 Wireless Noise-Cancelling Headphones",
+      "description": "Over-ear Bluetooth headphones with industry-leading active noise cancellation, 30-hour battery life and multipoint pairing.",
+      "category": "electronics",
+      "price": 29990,
+      "image_url": "https://picsum.photos/seed/retailsync-elec-001/600/600",
+      "inventory": {
+        "Bangalore Central": 25,
+        "Mumbai Metro": 18,
+        "Delhi Hub": 12
+      }
+    },
+    {
+      "sku": "ELEC-002",
+      "name": "Apple AirPods Pro (2nd Generation)",
+      "description": "True wireless earbuds with adaptive noise cancellation, transparency mode, spatial audio and a USB-C MagSafe charging case.",
+      "category": "electronics",
+      "price": 24900,
+      "image_url": "https://picsum.photos/seed/retailsync-elec-002/600/600",
+      "inventory": {
+        "Bangalore Central": 30,
+        "Mumbai Metro": 22,
+        "Delhi Hub": 15
+      }
+    },
+    {
+      "sku": "ELEC-003",
+      "name": "Samsung Galaxy S24 5G Smartphone (256GB)",
+      "description": "Android flagship phone with a 6.2-inch Dynamic AMOLED display, 50MP triple camera and Galaxy AI features.",
+      "category": "electronics",
+      "price": 79999,
+      "image_url": "https://picsum.photos/seed/retailsync-elec-003/600/600",
+      "inventory": {
+        "Bangalore Central": 8,
+        "Mumbai Metro": 6,
+        "Delhi Hub": 5
+      }
+    },
+    {
+      "sku": "ELEC-004",
+      "name": "OnePlus Nord CE4 5G Smartphone (128GB)",
+      "description": "Mid-range 5G phone with a 120Hz AMOLED display, 5500mAh battery and 100W SUPERVOOC fast charging.",
+      "category": "electronics",
+      "price": 24999,
+      "image_url": "https://picsum.photos/seed/retailsync-elec-004/600/600",
+      "inventory": {
+        "Bangalore Central": 14,
+        "Mumbai Metro": 10,
+        "Delhi Hub": 9
+      }
+    },
+    {
+      "sku": "ELEC-005",
+      "name": "Logitech MX Master 3S Wireless Mouse",
+      "description": "Ergonomic performance mouse with 8K DPI tracking, quiet clicks, MagSpeed scroll wheel and USB-C charging.",
+      "category": "electronics",
+      "price": 9995,
+      "image_url": "https://picsum.photos/seed/retailsync-elec-005/600/600",
+      "inventory": {
+        "Bangalore Central": 20,
+        "Mumbai Metro": 15,
+        "Delhi Hub": 0
+      }
+    },
+    {
+      "sku": "ELEC-006",
+      "name": "Amazon Kindle Paperwhite (16GB)",
+      "description": "Waterproof e-reader with a 6.8-inch glare-free display, adjustable warm light and weeks of battery life.",
+      "category": "electronics",
+      "price": 14999,
+      "image_url": "https://picsum.photos/seed/retailsync-elec-006/600/600",
+      "inventory": {
+        "Bangalore Central": 12,
+        "Mumbai Metro": 9,
+        "Delhi Hub": 7
+      }
+    },
+    {
+      "sku": "ELEC-007",
+      "name": "boAt Rockerz 450 Bluetooth On-Ear Headphones",
+      "description": "Lightweight wireless headphones with 40mm drivers, 15-hour playback and padded ear cushions.",
+      "category": "electronics",
+      "price": 1499,
+      "image_url": "https://picsum.photos/seed/retailsync-elec-007/600/600",
+      "inventory": {
+        "Bangalore Central": 60,
+        "Mumbai Metro": 45,
+        "Delhi Hub": 50
+      }
+    },
+    {
+      "sku": "ELEC-008",
+      "name": "JBL Flip 6 Portable Bluetooth Speaker",
+      "description": "Waterproof and dustproof IP67 speaker with punchy bass, 12-hour playtime and PartyBoost pairing.",
+      "category": "electronics",
+      "price": 11999,
+      "image_url": "https://picsum.photos/seed/retailsync-elec-008/600/600",
+      "inventory": {
+        "Bangalore Central": 18,
+        "Mumbai Metro": 14,
+        "Delhi Hub": 16
+      }
+    },
+    {
+      "sku": "ELEC-009",
+      "name": "Sony PlayStation 5 Slim Console",
+      "description": "Next-gen gaming console with ultra-high-speed SSD, ray tracing, 4K output and the DualSense wireless controller. Flash-sale item: one unit per store.",
+      "category": "electronics",
+      "price": 54990,
+      "image_url": "https://picsum.photos/seed/retailsync-elec-009/600/600",
+      "inventory": {
+        "Bangalore Central": 1,
+        "Mumbai Metro": 1,
+        "Delhi Hub": 1
+      }
+    },
+    {
+      "sku": "ELEC-010",
+      "name": "Anker PowerCore 20000mAh Power Bank (22.5W)",
+      "description": "High-capacity portable charger with fast charging over USB-C and USB-A for phones, tablets and earbuds.",
+      "category": "electronics",
+      "price": 2799,
+      "image_url": "https://picsum.photos/seed/retailsync-elec-010/600/600",
+      "inventory": {
+        "Bangalore Central": 50,
+        "Mumbai Metro": 40,
+        "Delhi Hub": 45
+      }
+    },
+    {
+      "sku": "ELEC-011",
+      "name": "Xiaomi Smart Band 8 Fitness Tracker",
+      "description": "Activity tracker with AMOLED screen, heart-rate and SpO2 monitoring, sleep tracking and 16-day battery.",
+      "category": "electronics",
+      "price": 3499,
+      "image_url": "https://picsum.photos/seed/retailsync-elec-011/600/600",
+      "inventory": {
+        "Bangalore Central": 40,
+        "Mumbai Metro": 35,
+        "Delhi Hub": 0
+      }
+    },
+    {
+      "sku": "APP-001",
+      "name": "Levi's 511 Slim Fit Men's Jeans",
+      "description": "Classic slim-fit denim jeans in stretch cotton with a mid rise and a tapered leg.",
+      "category": "apparel",
+      "price": 2999,
+      "image_url": "https://picsum.photos/seed/retailsync-app-001/600/600",
+      "inventory": {
+        "Bangalore Central": 35,
+        "Mumbai Metro": 30,
+        "Delhi Hub": 28
+      }
+    },
+    {
+      "sku": "APP-002",
+      "name": "Nike Air Zoom Pegasus 41 Running Shoes",
+      "description": "Responsive daily running shoes with ReactX foam, Air Zoom units and a breathable engineered mesh upper.",
+      "category": "apparel",
+      "price": 11895,
+      "image_url": "https://picsum.photos/seed/retailsync-app-002/600/600",
+      "inventory": {
+        "Bangalore Central": 10,
+        "Mumbai Metro": 8,
+        "Delhi Hub": 6
+      }
+    },
+    {
+      "sku": "APP-003",
+      "name": "Adidas Ultraboost Light Sneakers",
+      "description": "Lightweight running sneakers with Light BOOST cushioning, Primeknit upper and Continental rubber outsole.",
+      "category": "apparel",
+      "price": 17999,
+      "image_url": "https://picsum.photos/seed/retailsync-app-003/600/600",
+      "inventory": {
+        "Bangalore Central": 1,
+        "Mumbai Metro": 0,
+        "Delhi Hub": 2
+      }
+    },
+    {
+      "sku": "APP-004",
+      "name": "Allen Solly Men's Cotton Formal Shirt",
+      "description": "Regular-fit full-sleeve office shirt in breathable cotton with a spread collar.",
+      "category": "apparel",
+      "price": 1699,
+      "image_url": "https://picsum.photos/seed/retailsync-app-004/600/600",
+      "inventory": {
+        "Bangalore Central": 40,
+        "Mumbai Metro": 35,
+        "Delhi Hub": 30
+      }
+    },
+    {
+      "sku": "APP-005",
+      "name": "FabIndia Men's Cotton Kurta",
+      "description": "Hand-finished straight-cut kurta in soft cotton, ideal for festive and everyday ethnic wear.",
+      "category": "apparel",
+      "price": 1990,
+      "image_url": "https://picsum.photos/seed/retailsync-app-005/600/600",
+      "inventory": {
+        "Bangalore Central": 25,
+        "Mumbai Metro": 0,
+        "Delhi Hub": 30
+      }
+    },
+    {
+      "sku": "APP-006",
+      "name": "W Women's Printed Kurta and Palazzo Set",
+      "description": "Floral printed rayon kurta with matching palazzo pants for a comfortable ethnic look.",
+      "category": "apparel",
+      "price": 2499,
+      "image_url": "https://picsum.photos/seed/retailsync-app-006/600/600",
+      "inventory": {
+        "Bangalore Central": 20,
+        "Mumbai Metro": 18
+      }
+    },
+    {
+      "sku": "APP-007",
+      "name": "Puma Unisex Hooded Sweatshirt",
+      "description": "Cotton-blend fleece hoodie with kangaroo pocket, ribbed cuffs and the classic Puma logo.",
+      "category": "apparel",
+      "price": 2299,
+      "image_url": "https://picsum.photos/seed/retailsync-app-007/600/600",
+      "inventory": {
+        "Bangalore Central": 15,
+        "Mumbai Metro": 12,
+        "Delhi Hub": 25
+      }
+    },
+    {
+      "sku": "APP-008",
+      "name": "Woodland Men's Leather Hiking Boots",
+      "description": "Rugged nubuck leather trekking boots with a high-grip rubber sole and padded collar.",
+      "category": "apparel",
+      "price": 5995,
+      "image_url": "https://picsum.photos/seed/retailsync-app-008/600/600",
+      "inventory": {
+        "Bangalore Central": 8,
+        "Delhi Hub": 10
+      }
+    },
+    {
+      "sku": "APP-009",
+      "name": "Raymond Men's Wool Blend Blazer",
+      "description": "Tailored two-button blazer in a wool blend with notch lapels, perfect for formal occasions.",
+      "category": "apparel",
+      "price": 7999,
+      "image_url": "https://picsum.photos/seed/retailsync-app-009/600/600",
+      "inventory": {
+        "Bangalore Central": 5,
+        "Mumbai Metro": 6,
+        "Delhi Hub": 4
+      }
+    },
+    {
+      "sku": "APP-010",
+      "name": "Jockey Men's Cotton Crew Neck T-Shirts (Pack of 3)",
+      "description": "Super combed cotton round-neck tees with a regular fit for everyday wear.",
+      "category": "apparel",
+      "price": 1299,
+      "image_url": "https://picsum.photos/seed/retailsync-app-010/600/600",
+      "inventory": {
+        "Bangalore Central": 80,
+        "Mumbai Metro": 70,
+        "Delhi Hub": 75
+      }
+    },
+    {
+      "sku": "APP-011",
+      "name": "Bata Comfit Women's Sandals",
+      "description": "Cushioned everyday sandals with an anatomical footbed and slip-resistant sole.",
+      "category": "apparel",
+      "price": 999,
+      "image_url": "https://picsum.photos/seed/retailsync-app-011/600/600",
+      "inventory": {
+        "Bangalore Central": 30,
+        "Mumbai Metro": 25,
+        "Delhi Hub": 20
+      }
+    },
+    {
+      "sku": "GROC-001",
+      "name": "Tata Sampann Unpolished Toor Dal (1kg)",
+      "description": "Protein-rich unpolished arhar dal, naturally sorted for taste and nutrition.",
+      "category": "groceries",
+      "price": 189,
+      "image_url": "https://picsum.photos/seed/retailsync-groc-001/600/600",
+      "inventory": {
+        "Bangalore Central": 200,
+        "Mumbai Metro": 180,
+        "Delhi Hub": 220
+      }
+    },
+    {
+      "sku": "GROC-002",
+      "name": "Aashirvaad Shudh Chakki Whole Wheat Atta (5kg)",
+      "description": "Stone-ground whole wheat flour for soft rotis and chapatis.",
+      "category": "groceries",
+      "price": 285,
+      "image_url": "https://picsum.photos/seed/retailsync-groc-002/600/600",
+      "inventory": {
+        "Bangalore Central": 150,
+        "Mumbai Metro": 140,
+        "Delhi Hub": 160
+      }
+    },
+    {
+      "sku": "GROC-003",
+      "name": "India Gate Basmati Rice Classic (5kg)",
+      "description": "Aged long-grain basmati rice with a rich aroma, ideal for biryani and pulao.",
+      "category": "groceries",
+      "price": 899,
+      "image_url": "https://picsum.photos/seed/retailsync-groc-003/600/600",
+      "inventory": {
+        "Bangalore Central": 90,
+        "Mumbai Metro": 85,
+        "Delhi Hub": 95
+      }
+    },
+    {
+      "sku": "GROC-004",
+      "name": "Amul Pure Ghee (1L)",
+      "description": "Pure cow ghee with a rich granular texture and traditional aroma for cooking and sweets.",
+      "category": "groceries",
+      "price": 650,
+      "image_url": "https://picsum.photos/seed/retailsync-groc-004/600/600",
+      "inventory": {
+        "Bangalore Central": 75,
+        "Mumbai Metro": 80,
+        "Delhi Hub": 70
+      }
+    },
+    {
+      "sku": "GROC-005",
+      "name": "Tata Tea Gold (500g)",
+      "description": "Premium blend of Assam CTC and long leaf tea for a rich, aromatic cup of chai.",
+      "category": "groceries",
+      "price": 310,
+      "image_url": "https://picsum.photos/seed/retailsync-groc-005/600/600",
+      "inventory": {
+        "Bangalore Central": 120,
+        "Mumbai Metro": 110,
+        "Delhi Hub": 130
+      }
+    },
+    {
+      "sku": "GROC-006",
+      "name": "Nescafe Classic Instant Coffee (200g)",
+      "description": "Pure instant coffee granules with a strong taste and rich aroma.",
+      "category": "groceries",
+      "price": 590,
+      "image_url": "https://picsum.photos/seed/retailsync-groc-006/600/600",
+      "inventory": {
+        "Bangalore Central": 60,
+        "Mumbai Metro": 55,
+        "Delhi Hub": 0
+      }
+    },
+    {
+      "sku": "GROC-007",
+      "name": "Fortune Sunlite Refined Sunflower Oil (1L)",
+      "description": "Light and healthy refined sunflower cooking oil rich in vitamins A and D.",
+      "category": "groceries",
+      "price": 165,
+      "image_url": "https://picsum.photos/seed/retailsync-groc-007/600/600",
+      "inventory": {
+        "Bangalore Central": 140,
+        "Mumbai Metro": 130,
+        "Delhi Hub": 150
+      }
+    },
+    {
+      "sku": "GROC-008",
+      "name": "Haldiram's Aloo Bhujia (400g)",
+      "description": "Crispy spiced potato and gram flour namkeen snack.",
+      "category": "groceries",
+      "price": 120,
+      "image_url": "https://picsum.photos/seed/retailsync-groc-008/600/600",
+      "inventory": {
+        "Bangalore Central": 100,
+        "Mumbai Metro": 90,
+        "Delhi Hub": 110
+      }
+    },
+    {
+      "sku": "GROC-009",
+      "name": "Organic Tattva Organic White Quinoa (500g)",
+      "description": "Certified organic, gluten-free quinoa, a protein-rich alternative to rice.",
+      "category": "groceries",
+      "price": 349,
+      "image_url": "https://picsum.photos/seed/retailsync-groc-009/600/600",
+      "inventory": {
+        "Bangalore Central": 30,
+        "Mumbai Metro": 1
+      }
+    },
+    {
+      "sku": "GROC-010",
+      "name": "Kellogg's Corn Flakes Original (875g)",
+      "description": "Crunchy breakfast cereal made from golden corn, fortified with iron and vitamins.",
+      "category": "groceries",
+      "price": 375,
+      "image_url": "https://picsum.photos/seed/retailsync-groc-010/600/600",
+      "inventory": {
+        "Bangalore Central": 70,
+        "Mumbai Metro": 65,
+        "Delhi Hub": 60
+      }
+    },
+    {
+      "sku": "GROC-011",
+      "name": "Cadbury Dairy Milk Silk Chocolate Bar (150g)",
+      "description": "Smooth and creamy milk chocolate bar. Currently sold out in every store.",
+      "category": "groceries",
+      "price": 175,
+      "image_url": "https://picsum.photos/seed/retailsync-groc-011/600/600",
+      "inventory": {
+        "Bangalore Central": 0,
+        "Mumbai Metro": 0,
+        "Delhi Hub": 0
+      }
+    },
+    {
+      "sku": "HOME-001",
+      "name": "Prestige Svachh Aluminium Pressure Cooker (5L)",
+      "description": "Pressure cooker with a deep lid that controls spillage, plus a gasket-release safety system.",
+      "category": "home-goods",
+      "price": 2399,
+      "image_url": "https://picsum.photos/seed/retailsync-home-001/600/600",
+      "inventory": {
+        "Bangalore Central": 20,
+        "Mumbai Metro": 18,
+        "Delhi Hub": 22
+      }
+    },
+    {
+      "sku": "HOME-002",
+      "name": "Milton Thermosteel Flip Lid Flask (1L)",
+      "description": "Double-wall vacuum insulated stainless steel bottle that keeps drinks hot or cold for 24 hours.",
+      "category": "home-goods",
+      "price": 1099,
+      "image_url": "https://picsum.photos/seed/retailsync-home-002/600/600",
+      "inventory": {
+        "Bangalore Central": 45,
+        "Mumbai Metro": 40,
+        "Delhi Hub": 38
+      }
+    },
+    {
+      "sku": "HOME-003",
+      "name": "Philips HL7756 Mixer Grinder (750W)",
+      "description": "Powerful mixer grinder with three stainless steel jars and a turbo motor for wet and dry grinding.",
+      "category": "home-goods",
+      "price": 4199,
+      "image_url": "https://picsum.photos/seed/retailsync-home-003/600/600",
+      "inventory": {
+        "Bangalore Central": 10,
+        "Mumbai Metro": 9,
+        "Delhi Hub": 11
+      }
+    },
+    {
+      "sku": "HOME-004",
+      "name": "Pigeon Non-Stick Cookware Set (3 pcs)",
+      "description": "Induction-friendly non-stick kadai, fry pan and tawa with heat-resistant handles.",
+      "category": "home-goods",
+      "price": 1299,
+      "image_url": "https://picsum.photos/seed/retailsync-home-004/600/600",
+      "inventory": {
+        "Bangalore Central": 25,
+        "Mumbai Metro": 22,
+        "Delhi Hub": 0
+      }
+    },
+    {
+      "sku": "HOME-005",
+      "name": "Bombay Dyeing Cotton Double Bedsheet Set",
+      "description": "Soft 144 thread count cotton double bedsheet with two matching pillow covers.",
+      "category": "home-goods",
+      "price": 1499,
+      "image_url": "https://picsum.photos/seed/retailsync-home-005/600/600",
+      "inventory": {
+        "Bangalore Central": 30,
+        "Delhi Hub": 26
+      }
+    },
+    {
+      "sku": "HOME-006",
+      "name": "Solimo Microfibre Bath Towels (Set of 4)",
+      "description": "Quick-dry, highly absorbent microfibre bath towels that stay soft wash after wash.",
+      "category": "home-goods",
+      "price": 899,
+      "image_url": "https://picsum.photos/seed/retailsync-home-006/600/600",
+      "inventory": {
+        "Bangalore Central": 50,
+        "Mumbai Metro": 45,
+        "Delhi Hub": 40
+      }
+    },
+    {
+      "sku": "HOME-007",
+      "name": "Dyson V12 Detect Slim Cordless Vacuum Cleaner",
+      "description": "Lightweight cordless stick vacuum with laser dust detection and an LCD particle counter.",
+      "category": "home-goods",
+      "price": 52900,
+      "image_url": "https://picsum.photos/seed/retailsync-home-007/600/600",
+      "inventory": {
+        "Bangalore Central": 1,
+        "Mumbai Metro": 2,
+        "Delhi Hub": 1
+      }
+    },
+    {
+      "sku": "HOME-008",
+      "name": "Wakefit Orthopaedic Memory Foam Mattress (Queen)",
+      "description": "Medium-firm memory foam mattress with orthopaedic support for a restful sleep.",
+      "category": "home-goods",
+      "price": 18999,
+      "image_url": "https://picsum.photos/seed/retailsync-home-008/600/600",
+      "inventory": {
+        "Bangalore Central": 4,
+        "Mumbai Metro": 3,
+        "Delhi Hub": 5
+      }
+    },
+    {
+      "sku": "HOME-009",
+      "name": "Borosil Glass Mixing Bowl Set (3 pcs)",
+      "description": "Microwave-safe borosilicate glass bowls for mixing, baking and serving.",
+      "category": "home-goods",
+      "price": 799,
+      "image_url": "https://picsum.photos/seed/retailsync-home-009/600/600",
+      "inventory": {
+        "Bangalore Central": 35,
+        "Mumbai Metro": 30,
+        "Delhi Hub": 32
+      }
+    },
+    {
+      "sku": "HOME-010",
+      "name": "Havells Efficiencia Neo Ceiling Fan (1200mm)",
+      "description": "Energy-saving BLDC ceiling fan with remote control and silent operation.",
+      "category": "home-goods",
+      "price": 3299,
+      "image_url": "https://picsum.photos/seed/retailsync-home-010/600/600",
+      "inventory": {
+        "Bangalore Central": 12,
+        "Mumbai Metro": 15,
+        "Delhi Hub": 18
+      }
+    },
+    {
+      "sku": "HOME-011",
+      "name": "Philips Wi-Fi LED Smart Bulb (9W)",
+      "description": "App and voice controlled smart bulb with 16 million colours and tunable white light.",
+      "category": "home-goods",
+      "price": 699,
+      "image_url": "https://picsum.photos/seed/retailsync-home-011/600/600",
+      "inventory": {
+        "Bangalore Central": 80,
+        "Mumbai Metro": 70,
+        "Delhi Hub": 90
+      }
+    },
+    {
+      "sku": "SPRT-001",
+      "name": "Yonex Nanoray Light 18i Badminton Racket",
+      "description": "Lightweight graphite badminton racket with an aerodynamic frame for fast swings.",
+      "category": "sports-fitness",
+      "price": 2490,
+      "image_url": "https://picsum.photos/seed/retailsync-sprt-001/600/600",
+      "inventory": {
+        "Bangalore Central": 20,
+        "Mumbai Metro": 15,
+        "Delhi Hub": 18
+      }
+    },
+    {
+      "sku": "SPRT-002",
+      "name": "Cosco Premier Football (Size 5)",
+      "description": "Machine-stitched training and match football with a durable rubberised bladder.",
+      "category": "sports-fitness",
+      "price": 899,
+      "image_url": "https://picsum.photos/seed/retailsync-sprt-002/600/600",
+      "inventory": {
+        "Bangalore Central": 30,
+        "Mumbai Metro": 25,
+        "Delhi Hub": 28
+      }
+    },
+    {
+      "sku": "SPRT-003",
+      "name": "SG Kashmir Willow Cricket Bat",
+      "description": "Full-size Kashmir willow bat with a cane handle, ready to play out of the box.",
+      "category": "sports-fitness",
+      "price": 2299,
+      "image_url": "https://picsum.photos/seed/retailsync-sprt-003/600/600",
+      "inventory": {
+        "Bangalore Central": 15,
+        "Mumbai Metro": 12,
+        "Delhi Hub": 20
+      }
+    },
+    {
+      "sku": "SPRT-004",
+      "name": "Boldfit Anti-Skid Yoga Mat (6mm)",
+      "description": "Cushioned NBR yoga and exercise mat with an anti-slip texture and carry strap.",
+      "category": "sports-fitness",
+      "price": 599,
+      "image_url": "https://picsum.photos/seed/retailsync-sprt-004/600/600",
+      "inventory": {
+        "Bangalore Central": 60,
+        "Mumbai Metro": 55,
+        "Delhi Hub": 50
+      }
+    },
+    {
+      "sku": "SPRT-005",
+      "name": "Kore PVC Dumbbell Set (20kg)",
+      "description": "Home gym dumbbell set with adjustable plates, two rods and spin-lock collars.",
+      "category": "sports-fitness",
+      "price": 1799,
+      "image_url": "https://picsum.photos/seed/retailsync-sprt-005/600/600",
+      "inventory": {
+        "Bangalore Central": 10,
+        "Mumbai Metro": 8,
+        "Delhi Hub": 0
+      }
+    },
+    {
+      "sku": "SPRT-006",
+      "name": "Nivia Storm Basketball (Size 7)",
+      "description": "Rubber moulded basketball with a deep channel design for outdoor courts.",
+      "category": "sports-fitness",
+      "price": 749,
+      "image_url": "https://picsum.photos/seed/retailsync-sprt-006/600/600",
+      "inventory": {
+        "Bangalore Central": 25,
+        "Delhi Hub": 20
+      }
+    },
+    {
+      "sku": "SPRT-007",
+      "name": "Hero Sprint Mountain Bicycle (26T)",
+      "description": "Front-suspension mountain bike with 21-speed Shimano gears and dual disc brakes.",
+      "category": "sports-fitness",
+      "price": 8999,
+      "image_url": "https://picsum.photos/seed/retailsync-sprt-007/600/600",
+      "inventory": {
+        "Bangalore Central": 3,
+        "Mumbai Metro": 2,
+        "Delhi Hub": 4
+      }
+    },
+    {
+      "sku": "SPRT-008",
+      "name": "Strauss Ab Roller Wheel",
+      "description": "Dual-wheel abdominal roller with a knee mat for core strength workouts.",
+      "category": "sports-fitness",
+      "price": 499,
+      "image_url": "https://picsum.photos/seed/retailsync-sprt-008/600/600",
+      "inventory": {
+        "Bangalore Central": 40,
+        "Mumbai Metro": 35,
+        "Delhi Hub": 30
+      }
+    },
+    {
+      "sku": "SPRT-009",
+      "name": "Speedo Unisex Swimming Goggles",
+      "description": "Anti-fog, UV-protected swim goggles with an adjustable split strap.",
+      "category": "sports-fitness",
+      "price": 1150,
+      "image_url": "https://picsum.photos/seed/retailsync-sprt-009/600/600",
+      "inventory": {
+        "Bangalore Central": 18,
+        "Mumbai Metro": 22,
+        "Delhi Hub": 1
+      }
+    },
+    {
+      "sku": "SPRT-010",
+      "name": "Lifelong FitPro Motorised Treadmill",
+      "description": "Foldable home treadmill with a 2HP motor, 12 preset programs and a heart-rate sensor.",
+      "category": "sports-fitness",
+      "price": 27999,
+      "image_url": "https://picsum.photos/seed/retailsync-sprt-010/600/600",
+      "inventory": {
+        "Bangalore Central": 2,
+        "Mumbai Metro": 1,
+        "Delhi Hub": 3
+      }
+    },
+    {
+      "sku": "BOOK-001",
+      "name": "Atomic Habits by James Clear (Paperback)",
+      "description": "Bestselling guide to building good habits and breaking bad ones through tiny changes.",
+      "category": "books-stationery",
+      "price": 499,
+      "image_url": "https://picsum.photos/seed/retailsync-book-001/600/600",
+      "inventory": {
+        "Bangalore Central": 40,
+        "Mumbai Metro": 35,
+        "Delhi Hub": 45
+      }
+    },
+    {
+      "sku": "BOOK-002",
+      "name": "The Psychology of Money by Morgan Housel (Paperback)",
+      "description": "Timeless lessons on wealth, greed and happiness told through short stories.",
+      "category": "books-stationery",
+      "price": 399,
+      "image_url": "https://picsum.photos/seed/retailsync-book-002/600/600",
+      "inventory": {
+        "Bangalore Central": 30,
+        "Mumbai Metro": 28,
+        "Delhi Hub": 0
+      }
+    },
+    {
+      "sku": "BOOK-003",
+      "name": "Wings of Fire by A.P.J. Abdul Kalam (Paperback)",
+      "description": "Autobiography of India's Missile Man and former President, Dr. A.P.J. Abdul Kalam.",
+      "category": "books-stationery",
+      "price": 299,
+      "image_url": "https://picsum.photos/seed/retailsync-book-003/600/600",
+      "inventory": {
+        "Bangalore Central": 25,
+        "Mumbai Metro": 20,
+        "Delhi Hub": 30
+      }
+    },
+    {
+      "sku": "BOOK-004",
+      "name": "Classmate Spiral Notebooks (Pack of 6)",
+      "description": "Single-line ruled A5 spiral notebooks with 160 pages of smooth paper each.",
+      "category": "books-stationery",
+      "price": 360,
+      "image_url": "https://picsum.photos/seed/retailsync-book-004/600/600",
+      "inventory": {
+        "Bangalore Central": 100,
+        "Mumbai Metro": 90,
+        "Delhi Hub": 95
+      }
+    },
+    {
+      "sku": "BOOK-005",
+      "name": "Parker Vector Standard Fountain Pen",
+      "description": "Classic stainless steel fountain pen with a smooth nib and a refillable ink cartridge.",
+      "category": "books-stationery",
+      "price": 350,
+      "image_url": "https://picsum.photos/seed/retailsync-book-005/600/600",
+      "inventory": {
+        "Bangalore Central": 50,
+        "Mumbai Metro": 45,
+        "Delhi Hub": 40
+      }
+    },
+    {
+      "sku": "BOOK-006",
+      "name": "Faber-Castell Connector Pens (25 Colours)",
+      "description": "Washable sketch pens that clip together, ideal for colouring and school projects.",
+      "category": "books-stationery",
+      "price": 300,
+      "image_url": "https://picsum.photos/seed/retailsync-book-006/600/600",
+      "inventory": {
+        "Bangalore Central": 60,
+        "Delhi Hub": 50
+      }
+    },
+    {
+      "sku": "BOOK-007",
+      "name": "Camlin Kokuyo Oil Pastels (50 Shades)",
+      "description": "Smooth, vibrant oil pastels for blending and layering in art and craft.",
+      "category": "books-stationery",
+      "price": 260,
+      "image_url": "https://picsum.photos/seed/retailsync-book-007/600/600",
+      "inventory": {
+        "Bangalore Central": 1,
+        "Mumbai Metro": 40,
+        "Delhi Hub": 35
+      }
+    }
+  ]
+}
