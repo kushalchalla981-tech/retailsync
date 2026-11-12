@@ -138,6 +138,21 @@ describe('loadKafkaConfig', () => {
     assert.ok(issues.some((i) => i.startsWith('AIVEN_KAFKA_ACCESS_KEY_PATH: is required')));
   });
 
+  it('lists brokers, CA, cert, and key issues together on an empty environment', () => {
+    const issues = issuesOf(() => loadKafkaConfig({}, opts));
+    for (const prefix of [
+      'AIVEN_KAFKA_BROKERS: is required',
+      'AIVEN_CA_CERT_PATH: is required',
+      'AIVEN_KAFKA_ACCESS_CERT_PATH: is required',
+      'AIVEN_KAFKA_ACCESS_KEY_PATH: is required',
+    ]) {
+      assert.ok(
+        issues.some((i) => i.startsWith(prefix)),
+        `expected an issue starting with "${prefix}"`,
+      );
+    }
+  });
+
   it('builds SASL auth with a case-insensitive mechanism', () => {
     const kafka = loadKafkaConfig(
       {

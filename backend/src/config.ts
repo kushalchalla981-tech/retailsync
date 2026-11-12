@@ -300,8 +300,9 @@ export function loadPostgresConfig(rawEnv: Env, options: LoadOptions = {}): Post
   };
 }
 
+// Brokers are validated separately so auth problems are still reported when
+// AIVEN_KAFKA_BROKERS is missing (a first run should list everything at once).
 const kafkaSchema = z.object({
-  AIVEN_KAFKA_BROKERS: required('comma-separated Aiven Kafka host:port list'),
   AIVEN_KAFKA_AUTH: z.preprocess(lowercase, z.enum(['ssl', 'sasl']).default('ssl')),
   AIVEN_KAFKA_SASL_MECHANISM: z.preprocess(
     lowercase,
@@ -324,11 +325,13 @@ export function loadKafkaConfig(rawEnv: Env, options: LoadOptions = {}): KafkaCo
   const parsed = kafkaSchema.safeParse(env);
   if (!parsed.success) issues.push(...zodIssues(parsed.error));
 
-  let brokers: string[] = [];
-  if (parsed.success) {
-    brokers = parsed.data.AIVEN_KAFKA_BROKERS.split(',')
-      .map((b) => b.trim())
-      .filter(Boolean);
+  const brokers = (env.AIVEN_KAFKA_BROKERS ?? '')
+    .split(',')
+    .map((b) => b.trim())
+    .filter(Boolean);
+  if (!env.AIVEN_KAFKA_BROKERS) {
+    issues.push('AIVEN_KAFKA_BROKERS: is required (comma-separated Aiven Kafka host:port list)');
+  } else {
     if (brokers.length === 0) issues.push('AIVEN_KAFKA_BROKERS: must list at least one host:port');
     for (const [index, broker] of brokers.entries()) {
       const match = BROKER.exec(broker);
