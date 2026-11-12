@@ -1,0 +1,38 @@
+{
+  "contract": "1.0.0",
+  "flavor": "core",
+  "milestone": null,
+  "phases": [
+    {
+      "number": "1",
+      "name": "Cloud Foundation & Connectivity Baseline",
+      "status": "in_progress"
+    },
+    {
+      "number": "2",
+      "name": "PostgreSQL Store Engine & Concurrency Locking",
+      "status": "pending"
+    },
+    {
+      "number": "3",
+      "name": "Event-Driven Kafka Pipeline & OpenSearch Sync",
+      "status": "pending"
+    },
+    {
+      "number": "4",
+      "name": "Modern Storefront UI & Live Telemetry Inspector",
+      "status": "pending"
+    },
+    {
+      "number": "5",
+      "name": "Pitch Deck, Demo Video & Submission Readiness",
+      "status": "pending"
+    }
+  ],
+  "next": {
+    "command": "/gsd-progress",
+    "label": "Show progress",
+    "reason": "Unsure of state — showing progress"
+  },
+  "updated_at": "2026-11-12T17:23:27.665Z"
+}
