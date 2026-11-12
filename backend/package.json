@@ -15,6 +15,7 @@
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "test": "tsx --test \"src/**/*.test.ts\"",
     "db:migrate": "tsx src/db/migrations.ts",
+    "test:conn": "tsx src/scripts/test-conn.ts",
     "search:init": "tsx src/search/mappings.ts",
     "kafka:topics": "tsx src/kafka/topics.ts"
   },
