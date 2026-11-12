@@ -13,7 +13,8 @@
     "start": "node dist/server.js",
     "build": "tsc -b",
     "typecheck": "tsc -p tsconfig.json --noEmit",
-    "test": "tsx --test \"src/**/*.test.ts\""
+    "test": "tsx --test \"src/**/*.test.ts\"",
+    "db:migrate": "tsx src/db/migrations.ts"
   },
   "dependencies": {
     "@opensearch-project/opensearch": "^3.10.0",
