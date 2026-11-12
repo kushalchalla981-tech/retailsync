@@ -15,7 +15,8 @@
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "test": "tsx --test \"src/**/*.test.ts\"",
     "db:migrate": "tsx src/db/migrations.ts",
-    "search:init": "tsx src/search/mappings.ts"
+    "search:init": "tsx src/search/mappings.ts",
+    "kafka:topics": "tsx src/kafka/topics.ts"
   },
   "dependencies": {
     "@opensearch-project/opensearch": "^3.10.0",
