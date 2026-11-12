@@ -14,7 +14,8 @@
     "build": "tsc -b",
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "test": "tsx --test \"src/**/*.test.ts\"",
-    "db:migrate": "tsx src/db/migrations.ts"
+    "db:migrate": "tsx src/db/migrations.ts",
+    "search:init": "tsx src/search/mappings.ts"
   },
   "dependencies": {
     "@opensearch-project/opensearch": "^3.10.0",
