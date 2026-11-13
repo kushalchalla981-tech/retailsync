@@ -119,7 +119,7 @@ export const ConcurrencyRaceModal: React.FC<ConcurrencyRaceModalProps> = ({
           <button
             onClick={handleRunRace}
             disabled={isRunning || initialStock === 0}
-            className="w-full flex items-center justify-center gap-2 py-3 px-4 rounded-xl bg-gradient-to-r from-amber-500 to-brand-500 hover:from-amber-600 hover:to-brand-600 disabled:opacity-40 text-white font-bold text-sm transition shadow-lg"
+            className="w-full flex items-center justify-center gap-2 py-3 px-4 rounded-xl bg-brand-500 hover:bg-brand-600 disabled:opacity-40 text-white font-bold text-sm transition shadow-sm active:scale-95"
           >
             {isRunning ? (
               <>
