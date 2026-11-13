@@ -9,11 +9,11 @@ Requirements for initial release, broken down into vertical capability domains.
 
 ### Connectivity & Infrastructure Foundation (CONN)
 
-- [ ] **CONN-01**: Application loads Aiven configuration from `.env` and validates connectivity to PostgreSQL, Apache Kafka, and OpenSearch.
-- [ ] **CONN-02**: Database migration script creates tables and indexes in PostgreSQL.
-- [ ] **CONN-03**: OpenSearch index initialization script creates the `products` index with custom analyzers and mappings.
-- [ ] **CONN-04**: Kafka topic provisioning script ensures required topics (`orders.placed`, `inventory.updated`) exist with proper replication and partitioning.
-- [ ] **CONN-05**: Database seeder populates realistic multi-category retail products, store cities, and inventory counts.
+- [x] **CONN-01**: Application loads Aiven configuration from `.env` and validates connectivity to PostgreSQL, Apache Kafka, and OpenSearch.
+- [x] **CONN-02**: Database migration script creates tables and indexes in PostgreSQL.
+- [x] **CONN-03**: OpenSearch index initialization script creates the `products` index with custom analyzers and mappings.
+- [x] **CONN-04**: Kafka topic provisioning script ensures required topics (`orders.placed`, `inventory.updated`) exist with proper replication and partitioning.
+- [x] **CONN-05**: Database seeder populates realistic multi-category retail products, store cities, and inventory counts.
 
 ### Data Model & Stock Concurrency (DATA & STOCK)
 
@@ -74,11 +74,11 @@ Which phases cover which requirements.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| CONN-01 | Phase 1 | Pending |
-| CONN-02 | Phase 1 | Pending |
-| CONN-03 | Phase 1 | Pending |
-| CONN-04 | Phase 1 | Pending |
-| CONN-05 | Phase 1 | Pending |
+| CONN-01 | Phase 1 | Complete |
+| CONN-02 | Phase 1 | Complete |
+| CONN-03 | Phase 1 | Complete |
+| CONN-04 | Phase 1 | Complete |
+| CONN-05 | Phase 1 | Complete |
 | DATA-01 | Phase 2 | Pending |
 | STOCK-01 | Phase 2 | Pending |
 | STOCK-02 | Phase 2 | Pending |
