@@ -29,6 +29,7 @@ NOTES = {
 prs = Presentation()
 prs.slide_width, prs.slide_height = Emu(1920 * PX), Emu(1080 * PX)
 boxes = json.loads((DECK / "edit-boxes.json").read_text())
+links = json.loads((DECK / "links.json").read_text()) if (DECK / "links.json").exists() else []
 
 for i in range(1, 8):
     slide = prs.slides.add_slide(prs.slide_layouts[6])
@@ -43,6 +44,11 @@ for i in range(1, 8):
         run.font.size = Pt(b["size"] * 0.75)
         run.font.name = "Arial Narrow"
         run.font.color.rgb = INK
+    for lk in (lk for lk in links if lk["slide"] == i):
+        hot = slide.shapes.add_shape(1, Emu(int(lk["x"] * PX)), Emu(int(lk["y"] * PX)), Emu(int(lk["w"] * PX)), Emu(int(lk["h"] * PX)))
+        hot.fill.background()
+        hot.line.fill.background()
+        hot.click_action.hyperlink.address = lk["href"]
     slide.notes_slide.notes_text_frame.text = NOTES[i]
 
 prs.save(OUT)
