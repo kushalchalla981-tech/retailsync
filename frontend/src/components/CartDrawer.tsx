@@ -1,163 +1,220 @@
-import React from 'react';
-import { X, Trash2, Plus, Minus, ArrowRight, ShoppingBag, ShieldCheck } from 'lucide-react';
-import { CartItem, City } from '../types';
+import { useState, type FormEvent } from 'react';
+import { Minus, Plus, Trash2, X } from 'lucide-react';
+import { Dialog } from './Dialog';
+import { api, ApiError, inr, short } from '../services/api';
+import type { Cart, Order } from '../types';
 
-interface CartDrawerProps {
-  isOpen: boolean;
+interface Props {
+  open: boolean;
   onClose: () => void;
-  items: CartItem[];
-  selectedCity: City;
-  onUpdateQuantity: (productId: string, quantity: number) => void;
-  onRemoveItem: (productId: string) => void;
-  onProceedToCheckout: () => void;
+  cart: Cart | null;
+  busy: boolean;
+  onQuantity: (productId: string, quantity: number) => void;
+  onRemove: (productId: string) => void;
+  onCheckedOut: () => void;
 }
 
-export const CartDrawer: React.FC<CartDrawerProps> = ({
-  isOpen,
-  onClose,
-  items,
-  selectedCity,
-  onUpdateQuantity,
-  onRemoveItem,
-  onProceedToCheckout,
-}) => {
-  if (!isOpen) return null;
+type Step = 'cart' | 'details' | 'placing' | 'placed';
 
-  const subtotal = items.reduce((sum, item) => sum + item.product.price * item.quantity, 0);
-  const total = subtotal;
+export function CartDrawer({ open, onClose, cart, busy, onQuantity, onRemove, onCheckedOut }: Props) {
+  const [step, setStep] = useState<Step>('cart');
+  const [name, setName] = useState('');
+  const [email, setEmail] = useState('');
+  const [error, setError] = useState<{ title: string; body: string; lines?: string[] } | null>(null);
+  const [order, setOrder] = useState<Order | null>(null);
+  const [replayed, setReplayed] = useState(false);
+
+  const close = () => {
+    if (step === 'placed') {
+      setStep('cart');
+      setOrder(null);
+    }
+    setError(null);
+    onClose();
+  };
+
+  const submit = async (e: FormEvent) => {
+    e.preventDefault();
+    if (!cart) return;
+    setStep('placing');
+    setError(null);
+    try {
+      const r = await api.checkout(cart.id, { name: name.trim(), email: email.trim() });
+      setOrder(r.data.order);
+      setReplayed(r.data.replayed);
+      setStep('placed');
+      onCheckedOut();
+    } catch (err) {
+      setStep('details');
+      if (err instanceof ApiError && err.notDeployed) {
+        setError({ title: 'Checkout is not available yet', body: 'The server has no checkout route yet (plan 02-02). Your cart is saved and nothing was charged.' });
+      } else if (err instanceof ApiError && err.code === 'OUT_OF_STOCK') {
+        const items = (err.details?.items as { name: string; requested: number; available: number }[] | undefined) ?? [];
+        setError({
+          title: 'Someone got there first',
+          body: `${err.message} The transaction rolled back; no stock moved and your cart is unchanged.`,
+          lines: items.map((i) => `${i.name}: wanted ${i.requested}, ${i.available} left`),
+        });
+      } else {
+        setError({ title: 'Checkout failed', body: err instanceof Error ? err.message : 'Unknown error. Try again.' });
+      }
+    }
+  };
+
+  const items = cart?.items ?? [];
 
   return (
-    <div className="fixed inset-0 z-50 overflow-hidden">
-      {/* Backdrop */}
-      <div
-        className="absolute inset-0 bg-slate-950/70 backdrop-blur-sm transition-opacity"
-        onClick={onClose}
-      />
+    <Dialog open={open} onClose={close} labelledBy="cart-title" placement="right">
+      <header className="flex items-center justify-between px-6 pb-3 pt-6">
+        <h2 id="cart-title" className="text-xl font-extrabold tracking-tight">
+          {step === 'placed' ? 'Order receipt' : step === 'cart' ? 'Your cart' : 'Checkout'}
+        </h2>
+        <button type="button" onClick={close} aria-label="Close cart" className="-mr-2 p-2 text-ink-2 hover:text-ink">
+          <X className="h-5 w-5" aria-hidden="true" />
+        </button>
+      </header>
+      <p className="figures px-6 text-[0.6875rem] text-ink-2">
+        {cart?.location ? `Pickup store · ${cart.location.name}, ${cart.location.city}` : 'No store selected'}
+      </p>
+      <div className="perf mx-6 mt-3" />
 
-      <div className="fixed inset-y-0 right-0 max-w-full flex pl-10">
-        <div className="w-screen max-w-md bg-slate-900 border-l border-slate-800 shadow-2xl flex flex-col">
-          {/* Drawer Header */}
-          <div className="p-4 sm:p-6 border-b border-slate-800 flex items-center justify-between">
-            <div className="flex items-center gap-2.5">
-              <div className="w-8 h-8 rounded-lg bg-brand-500/10 flex items-center justify-center text-brand-400 border border-brand-500/20">
-                <ShoppingBag className="w-4 h-4" />
-              </div>
-              <h2 className="text-base font-semibold text-white">Your Shopping Cart</h2>
-            </div>
-            <button
-              onClick={onClose}
-              className="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition"
-            >
-              <X className="w-5 h-5" />
-            </button>
+      <div className="min-h-0 flex-1 overflow-y-auto px-6 py-4">
+        {step === 'placed' && order ? (
+          <div className="figures text-[0.75rem]">
+            <span className="stamp text-[0.8125rem]" style={{ color: 'var(--ok)' }}>
+              {replayed ? 'Replayed' : 'Committed'}
+            </span>
+            <dl className="mt-5 space-y-1.5">
+              <Row k="order" v={short(order.id)} />
+              <Row k="store" v={order.location.name} />
+              <Row k="customer" v={order.customer.name} />
+              <Row k="placed" v={new Date(order.createdAt).toLocaleString('en-IN')} />
+            </dl>
+            <div className="perf my-4" />
+            <ul className="space-y-1.5">
+              {order.items.map((i) => (
+                <li key={i.productId} className="flex justify-between gap-3">
+                  <span className="truncate">
+                    {i.quantity} × {i.name}
+                  </span>
+                  <span>{inr(i.lineTotal)}</span>
+                </li>
+              ))}
+            </ul>
+            <div className="perf my-4" />
+            <Row k="total" v={inr(order.totalAmount)} strong />
+            <p className="mt-6 font-sans text-sm text-ink-2">The stock decrement and this order committed in one PostgreSQL transaction. The ledger shows the line.</p>
           </div>
-
-          {/* Drawer Items List */}
-          <div className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-4">
-            {items.length === 0 ? (
-              <div className="h-full flex flex-col items-center justify-center text-center p-6 text-slate-400 space-y-3">
-                <ShoppingBag className="w-12 h-12 text-slate-600 stroke-[1.5]" />
-                <p className="text-sm font-medium">Your cart is currently empty</p>
-                <p className="text-xs text-slate-500 max-w-xs">
-                  Browse products and add them to test the live stock reservations.
-                </p>
-              </div>
-            ) : (
-              items.map((item) => {
-                const maxStock = item.product.inventory[selectedCity] || 0;
-                return (
-                  <div
-                    key={item.product.id}
-                    className="p-3.5 rounded-xl bg-slate-850 border border-slate-800 flex gap-3.5 items-center"
-                  >
-                    <img
-                      src={item.product.image}
-                      alt={item.product.title}
-                      className="w-16 h-16 rounded-lg object-cover bg-slate-950 shrink-0 border border-slate-800"
-                    />
-                    <div className="flex-1 min-w-0">
-                      <h4 className="text-xs font-semibold text-slate-100 truncate">
-                        {item.product.title}
-                      </h4>
-                      <p className="text-[11px] text-slate-400 mt-0.5">
-                        Stock in {selectedCity}: <span className="text-emerald-400 font-medium tabular-nums">{maxStock} units</span>
-                      </p>
-                      <div className="text-xs font-bold text-white tabular-nums mt-1">
-                        ₹{(item.product.price * item.quantity).toLocaleString('en-IN')}
-                      </div>
-                    </div>
-
-                    {/* Quantity controls */}
-                    <div className="flex flex-col items-end gap-2 shrink-0">
-                      <button
-                        onClick={() => onRemoveItem(item.product.id)}
-                        className="text-slate-500 hover:text-rose-400 transition p-1"
-                        title="Remove item"
-                      >
-                        <Trash2 className="w-3.5 h-3.5" />
+        ) : items.length === 0 ? (
+          <p className="py-10 text-center text-sm text-ink-2">Your cart is empty. Add something from the shelf.</p>
+        ) : (
+          <ul className="divide-y divide-dashed divide-rule">
+            {items.map((i) => (
+              <li key={i.productId} className="flex gap-3 py-3">
+                <div className="h-14 w-14 shrink-0 overflow-hidden bg-paper">
+                  {i.imageUrl && <img src={i.imageUrl} alt="" className="h-full w-full object-cover" />}
+                </div>
+                <div className="min-w-0 flex-1">
+                  <p className="truncate text-sm font-semibold">{i.name}</p>
+                  <p className="figures text-[0.6875rem] text-ink-2">
+                    {inr(i.unitPrice)} · {i.availableQuantity} at this store
+                  </p>
+                  {step === 'cart' && (
+                    <div className="mt-2 flex items-center gap-1">
+                      <button type="button" disabled={busy || i.quantity <= 1} onClick={() => onQuantity(i.productId, i.quantity - 1)} aria-label={`One fewer ${i.name}`} className="border border-rule p-1 hover:border-ink disabled:opacity-40">
+                        <Minus className="h-3.5 w-3.5" aria-hidden="true" />
                       </button>
-
-                      <div className="flex items-center gap-1.5 bg-slate-900 border border-slate-700 rounded-lg p-0.5">
-                        <button
-                          onClick={() => onUpdateQuantity(item.product.id, item.quantity - 1)}
-                          disabled={item.quantity <= 1}
-                          className="p-1 text-slate-400 hover:text-white disabled:opacity-30 disabled:cursor-not-allowed"
-                        >
-                          <Minus className="w-3 h-3" />
-                        </button>
-                        <span className="text-xs font-semibold text-white px-1.5 tabular-nums">
-                          {item.quantity}
-                        </span>
-                        <button
-                          onClick={() => onUpdateQuantity(item.product.id, item.quantity + 1)}
-                          disabled={item.quantity >= maxStock}
-                          className="p-1 text-slate-400 hover:text-white disabled:opacity-30 disabled:cursor-not-allowed"
-                          title={item.quantity >= maxStock ? 'Max stock reached' : undefined}
-                        >
-                          <Plus className="w-3 h-3" />
-                        </button>
-                      </div>
+                      <span className="figures w-8 text-center text-[0.75rem]" aria-label="Quantity">
+                        {i.quantity}
+                      </span>
+                      <button type="button" disabled={busy} onClick={() => onQuantity(i.productId, i.quantity + 1)} aria-label={`One more ${i.name}`} className="border border-rule p-1 hover:border-ink disabled:opacity-40">
+                        <Plus className="h-3.5 w-3.5" aria-hidden="true" />
+                      </button>
+                      <button type="button" disabled={busy} onClick={() => onRemove(i.productId)} aria-label={`Remove ${i.name}`} className="ml-auto p-1 text-ink-2 hover:text-fail">
+                        <Trash2 className="h-4 w-4" aria-hidden="true" />
+                      </button>
                     </div>
-                  </div>
-                );
-              })
+                  )}
+                  {i.quantity > i.availableQuantity && <p className="mt-1 text-[0.75rem] text-fail">Only {i.availableQuantity} left here.</p>}
+                </div>
+                <span className="figures text-[0.75rem] font-semibold">{inr(i.lineTotal)}</span>
+              </li>
+            ))}
+          </ul>
+        )}
+
+        {(step === 'details' || step === 'placing') && (
+          <form id="checkout-form" onSubmit={submit} className="mt-4 space-y-3">
+            <div className="perf mb-4" />
+            <Field id="co-name" label="Name" value={name} onChange={setName} autoComplete="name" />
+            <Field id="co-email" label="Email" type="email" value={email} onChange={setEmail} autoComplete="email" />
+            {error && (
+              <div role="alert" className="border border-fail px-3 py-2 text-sm">
+                <p className="font-semibold text-fail">{error.title}</p>
+                <p className="mt-1 text-ink-2">{error.body}</p>
+                {error.lines?.map((l) => (
+                  <p key={l} className="figures mt-1 text-[0.6875rem]">
+                    {l}
+                  </p>
+                ))}
+              </div>
             )}
+          </form>
+        )}
+      </div>
+
+      {step !== 'placed' && items.length > 0 && (
+        <footer className="border-t border-rule px-6 py-4">
+          <div className="figures mb-3 flex justify-between text-sm font-semibold">
+            <span>Subtotal</span>
+            <span>{inr(cart?.subtotal ?? 0)}</span>
           </div>
-
-          {/* Drawer Footer with Checkout */}
-          {items.length > 0 && (
-            <div className="p-4 sm:p-6 border-t border-slate-800 bg-slate-950/80 space-y-4">
-              <div className="space-y-1.5 text-xs">
-                <div className="flex justify-between text-slate-400">
-                  <span>Subtotal</span>
-                  <span className="text-white font-medium tabular-nums">₹{subtotal.toLocaleString('en-IN')}</span>
-                </div>
-                <div className="flex justify-between text-slate-400">
-                  <span>Store Pickup & Delivery</span>
-                  <span className="text-emerald-400 font-medium">FREE</span>
-                </div>
-                <div className="flex justify-between text-sm font-bold text-white pt-2 border-t border-slate-800">
-                  <span>Total Due</span>
-                  <span className="text-base text-brand-400 tabular-nums">₹{total.toLocaleString('en-IN')}</span>
-                </div>
-              </div>
-
-              <div className="flex items-center gap-2 text-[11px] text-slate-400 bg-slate-900 p-2.5 rounded-lg border border-slate-800">
-                <ShieldCheck className="w-4 h-4 text-emerald-400 shrink-0" />
-                <span>Protected by PostgreSQL Row Locks (Zero Oversell Guarantee)</span>
-              </div>
-
-              <button
-                onClick={onProceedToCheckout}
-                className="w-full flex items-center justify-center gap-2 py-3 px-4 rounded-xl bg-brand-500 hover:bg-brand-600 text-white font-semibold text-sm transition shadow-glow-brand"
-              >
-                <span>Proceed to Checkout</span>
-                <ArrowRight className="w-4 h-4" />
+          {step === 'cart' ? (
+            <button type="button" onClick={() => setStep('details')} className="w-full bg-ink py-3 text-sm font-semibold text-sheet hover:bg-[#33312c]">
+              Check out
+            </button>
+          ) : (
+            <div className="flex gap-2">
+              <button type="button" onClick={() => setStep('cart')} disabled={step === 'placing'} className="border border-ink px-4 py-3 text-sm font-semibold hover:bg-paper">
+                Back
+              </button>
+              <button type="submit" form="checkout-form" disabled={step === 'placing'} className="flex-1 bg-ink py-3 text-sm font-semibold text-sheet hover:bg-[#33312c] disabled:opacity-60">
+                {step === 'placing' ? 'Locking stock…' : 'Place order'}
               </button>
             </div>
           )}
-        </div>
-      </div>
+        </footer>
+      )}
+    </Dialog>
+  );
+}
+
+function Row({ k, v, strong }: { k: string; v: string; strong?: boolean }) {
+  return (
+    <div className={`flex gap-2 ${strong ? 'text-sm font-bold' : ''}`}>
+      <dt className="text-ink-2">{k}</dt>
+      <span aria-hidden="true" className="mb-1 flex-1 border-b border-dotted border-rule" />
+      <dd>{v}</dd>
     </div>
   );
-};
+}
+
+function Field(props: { id: string; label: string; value: string; onChange: (v: string) => void; type?: string; autoComplete?: string }) {
+  return (
+    <div>
+      <label htmlFor={props.id} className="block text-sm font-semibold">
+        {props.label}
+      </label>
+      <input
+        id={props.id}
+        required
+        type={props.type ?? 'text'}
+        maxLength={props.type === 'email' ? 254 : 120}
+        autoComplete={props.autoComplete}
+        value={props.value}
+        onChange={(e) => props.onChange(e.target.value)}
+        className="mt-1 w-full border border-ink-2 bg-sheet px-3 py-2 text-sm focus:border-ink"
+      />
+    </div>
+  );
+}
