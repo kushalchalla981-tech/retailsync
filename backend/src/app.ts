@@ -4,6 +4,7 @@
  */
 import { existsSync } from 'node:fs';
 import { resolve } from 'node:path';
+import { fileURLToPath } from 'node:url';
 
 import fastifyStatic from '@fastify/static';
 import Fastify, { type FastifyInstance } from 'fastify';
@@ -65,7 +66,9 @@ export function buildApp(options: BuildAppOptions): FastifyInstance {
 
   // Serve the built storefront (frontend/dist) from the same origin when present,
   // with SPA fallback for non-API paths.
-  const staticDir = resolve(process.env.STATIC_DIR ?? 'frontend/dist');
+  // Resolved from this file (src/ or dist/ both sit two levels below the repo root), not the cwd,
+  // because `npm start --workspace backend` runs inside backend/.
+  const staticDir = process.env.STATIC_DIR ? resolve(process.env.STATIC_DIR) : fileURLToPath(new URL('../../frontend/dist', import.meta.url));
   if (existsSync(staticDir)) {
     app.register(fastifyStatic, { root: staticDir, wildcard: false });
     app.get('/*', (request, reply) => (request.url.startsWith('/api') ? reply.callNotFound() : reply.sendFile('index.html')));
