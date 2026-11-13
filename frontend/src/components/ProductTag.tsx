@@ -20,13 +20,11 @@ export function ProductTag({ product, store, inCart, busy, onAdd }: Props) {
 
   return (
     <article className="group flex flex-col bg-sheet">
-      <div className="aspect-[4/3] overflow-hidden bg-paper">
-        {product.imageUrl ? (
+      {product.imageUrl && (
+        <div className="aspect-[4/3] overflow-hidden bg-paper">
           <img src={product.imageUrl} alt="" loading="lazy" className="h-full w-full object-cover transition-transform duration-500 ease-out group-hover:scale-[1.03]" />
-        ) : (
-          <div className="figures flex h-full items-center justify-center text-[0.6875rem] text-ink-2">{product.sku}</div>
-        )}
-      </div>
+        </div>
+      )}
       <div className="flex flex-1 flex-col px-4 pb-4 pt-3">
         <div className="figures flex justify-between text-[0.625rem] text-ink-2">
           <span>{product.category.name}</span>

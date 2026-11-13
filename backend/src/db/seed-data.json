@@ -50,7 +50,7 @@
       "description": "Over-ear Bluetooth headphones with industry-leading active noise cancellation, 30-hour battery life and multipoint pairing.",
       "category": "electronics",
       "price": 29990,
-      "image_url": "https://picsum.photos/seed/retailsync-elec-001/600/600",
+      "image_url": null,
       "inventory": {
         "Bangalore Central": 25,
         "Mumbai Metro": 18,
@@ -63,7 +63,7 @@
       "description": "True wireless earbuds with adaptive noise cancellation, transparency mode, spatial audio and a USB-C MagSafe charging case.",
       "category": "electronics",
       "price": 24900,
-      "image_url": "https://picsum.photos/seed/retailsync-elec-002/600/600",
+      "image_url": null,
       "inventory": {
         "Bangalore Central": 30,
         "Mumbai Metro": 22,
@@ -76,7 +76,7 @@
       "description": "Android flagship phone with a 6.2-inch Dynamic AMOLED display, 50MP triple camera and Galaxy AI features.",
       "category": "electronics",
       "price": 79999,
-      "image_url": "https://picsum.photos/seed/retailsync-elec-003/600/600",
+      "image_url": null,
       "inventory": {
         "Bangalore Central": 8,
         "Mumbai Metro": 6,
@@ -89,7 +89,7 @@
       "description": "Mid-range 5G phone with a 120Hz AMOLED display, 5500mAh battery and 100W SUPERVOOC fast charging.",
       "category": "electronics",
       "price": 24999,
-      "image_url": "https://picsum.photos/seed/retailsync-elec-004/600/600",
+      "image_url": null,
       "inventory": {
         "Bangalore Central": 14,
         "Mumbai Metro": 10,
@@ -102,7 +102,7 @@
       "description": "Ergonomic performance mouse with 8K DPI tracking, quiet clicks, MagSpeed scroll wheel and USB-C charging.",
       "category": "electronics",
       "price": 9995,
-      "image_url": "https://picsum.photos/seed/retailsync-elec-005/600/600",
+      "image_url": null,
       "inventory": {
         "Bangalore Central": 20,
         "Mumbai Metro": 15,
@@ -115,7 +115,7 @@
       "description": "Waterproof e-reader with a 6.8-inch glare-free display, adjustable warm light and weeks of battery life.",
       "category": "electronics",
       "price": 14999,
-      "image_url": "https://picsum.photos/seed/retailsync-elec-006/600/600",
+      "image_url": null,
       "inventory": {
         "Bangalore Central": 12,
         "Mumbai Metro": 9,
@@ -128,7 +128,7 @@
       "description": "Lightweight wireless headphones with 40mm drivers, 15-hour playback and padded ear cushions.",
       "category": "electronics",
       "price": 1499,
-      "image_url": "https://picsum.photos/seed/retailsync-elec-007/600/600",
+      "image_url": null,
       "inventory": {
         "Bangalore Central": 60,
         "Mumbai Metro": 45,
@@ -141,7 +141,7 @@
       "description": "Waterproof and dustproof IP67 speaker with punchy bass, 12-hour playtime and PartyBoost pairing.",
       "category": "electronics",
       "price": 11999,
-      "image_url": "https://picsum.photos/seed/retailsync-elec-008/600/600",
+      "image_url": null,
       "inventory": {
         "Bangalore Central": 18,
         "Mumbai Metro": 14,
@@ -154,7 +154,7 @@
       "description": "Next-gen gaming console with ultra-high-speed SSD, ray tracing, 4K output and the DualSense wireless controller. Flash-sale item: one unit per store.",
       "category": "electronics",
       "price": 54990,
-      "image_url": "https://picsum.photos/seed/retailsync-elec-009/600/600",
+      "image_url": null,
       "inventory": {
         "Bangalore Central": 1,
         "Mumbai Metro": 1,
@@ -167,7 +167,7 @@
       "description": "High-capacity portable charger with fast charging over USB-C and USB-A for phones, tablets and earbuds.",
       "category": "electronics",
       "price": 2799,
-      "image_url": "https://picsum.photos/seed/retailsync-elec-010/600/600",
+      "image_url": null,
       "inventory": {
         "Bangalore Central": 50,
         "Mumbai Metro": 40,
@@ -180,7 +180,7 @@
       "description": "Activity tracker with AMOLED screen, heart-rate and SpO2 monitoring, sleep tracking and 16-day battery.",
       "category": "electronics",
       "price": 3499,
-      "image_url": "https://picsum.photos/seed/retailsync-elec-011/600/600",
+      "image_url": null,
       "inventory": {
         "Bangalore Central": 40,
         "Mumbai Metro": 35,
@@ -193,7 +193,7 @@
       "description": "Classic slim-fit denim jeans in stretch cotton with a mid rise and a tapered leg.",
       "category": "apparel",
       "price": 2999,
-      "image_url": "https://picsum.photos/seed/retailsync-app-001/600/600",
+      "image_url": null,
       "inventory": {
         "Bangalore Central": 35,
         "Mumbai Metro": 30,
@@ -206,7 +206,7 @@
       "description": "Responsive daily running shoes with ReactX foam, Air Zoom units and a breathable engineered mesh upper.",
       "category": "apparel",
       "price": 11895,
-      "image_url": "https://picsum.photos/seed/retailsync-app-002/600/600",
+      "image_url": null,
       "inventory": {
         "Bangalore Central": 10,
         "Mumbai Metro": 8,
@@ -219,7 +219,7 @@
       "description": "Lightweight running sneakers with Light BOOST cushioning, Primeknit upper and Continental rubber outsole.",
       "category": "apparel",
       "price": 17999,
-      "image_url": "https://picsum.photos/seed/retailsync-app-003/600/600",
+      "image_url": null,
       "inventory": {
         "Bangalore Central": 1,
         "Mumbai Metro": 0,
@@ -232,7 +232,7 @@
       "description": "Regular-fit full-sleeve office shirt in breathable cotton with a spread collar.",
       "category": "apparel",
       "price": 1699,
-      "image_url": "https://picsum.photos/seed/retailsync-app-004/600/600",
+      "image_url": null,
       "inventory": {
         "Bangalore Central": 40,
         "Mumbai Metro": 35,
@@ -245,7 +245,7 @@
       "description": "Hand-finished straight-cut kurta in soft cotton, ideal for festive and everyday ethnic wear.",
       "category": "apparel",
       "price": 1990,
-      "image_url": "https://picsum.photos/seed/retailsync-app-005/600/600",
+      "image_url": null,
       "inventory": {
         "Bangalore Central": 25,
         "Mumbai Metro": 0,
@@ -258,7 +258,7 @@
       "description": "Floral printed rayon kurta with matching palazzo pants for a comfortable ethnic look.",
       "category": "apparel",
       "price": 2499,
-      "image_url": "https://picsum.photos/seed/retailsync-app-006/600/600",
+      "image_url": null,
       "inventory": {
         "Bangalore Central": 20,
         "Mumbai Metro": 18
@@ -270,7 +270,7 @@
       "description": "Cotton-blend fleece hoodie with kangaroo pocket, ribbed cuffs and the classic Puma logo.",
       "category": "apparel",
       "price": 2299,
-      "image_url": "https://picsum.photos/seed/retailsync-app-007/600/600",
+      "image_url": null,
       "inventory": {
         "Bangalore Central": 15,
         "Mumbai Metro": 12,
@@ -283,7 +283,7 @@
       "description": "Rugged nubuck leather trekking boots with a high-grip rubber sole and padded collar.",
       "category": "apparel",
       "price": 5995,
-      "image_url": "https://picsum.photos/seed/retailsync-app-008/600/600",
+      "image_url": null,
       "inventory": {
         "Bangalore Central": 8,
         "Delhi Hub": 10
@@ -295,7 +295,7 @@
       "description": "Tailored two-button blazer in a wool blend with notch lapels, perfect for formal occasions.",
       "category": "apparel",
       "price": 7999,
-      "image_url": "https://picsum.photos/seed/retailsync-app-009/600/600",
+      "image_url": null,
       "inventory": {
         "Bangalore Central": 5,
         "Mumbai Metro": 6,
@@ -308,7 +308,7 @@
       "description": "Super combed cotton round-neck tees with a regular fit for everyday wear.",
       "category": "apparel",
       "price": 1299,
-      "image_url": "https://picsum.photos/seed/retailsync-app-010/600/600",
+      "image_url": null,
       "inventory": {
         "Bangalore Central": 80,
         "Mumbai Metro": 70,
@@ -321,7 +321,7 @@
       "description": "Cushioned everyday sandals with an anatomical footbed and slip-resistant sole.",
       "category": "apparel",
       "price": 999,
-      "image_url": "https://picsum.photos/seed/retailsync-app-011/600/600",
+      "image_url": null,
       "inventory": {
         "Bangalore Central": 30,
         "Mumbai Metro": 25,
@@ -334,7 +334,7 @@
       "description": "Protein-rich unpolished arhar dal, naturally sorted for taste and nutrition.",
       "category": "groceries",
       "price": 189,
-      "image_url": "https://picsum.photos/seed/retailsync-groc-001/600/600",
+      "image_url": null,
       "inventory": {
         "Bangalore Central": 200,
         "Mumbai Metro": 180,
@@ -347,7 +347,7 @@
       "description": "Stone-ground whole wheat flour for soft rotis and chapatis.",
       "category": "groceries",
       "price": 285,
-      "image_url": "https://picsum.photos/seed/retailsync-groc-002/600/600",
+      "image_url": null,
       "inventory": {
         "Bangalore Central": 150,
         "Mumbai Metro": 140,
@@ -360,7 +360,7 @@
       "description": "Aged long-grain basmati rice with a rich aroma, ideal for biryani and pulao.",
       "category": "groceries",
       "price": 899,
-      "image_url": "https://picsum.photos/seed/retailsync-groc-003/600/600",
+      "image_url": null,
       "inventory": {
         "Bangalore Central": 90,
         "Mumbai Metro": 85,
@@ -373,7 +373,7 @@
       "description": "Pure cow ghee with a rich granular texture and traditional aroma for cooking and sweets.",
       "category": "groceries",
       "price": 650,
-      "image_url": "https://picsum.photos/seed/retailsync-groc-004/600/600",
+      "image_url": null,
       "inventory": {
         "Bangalore Central": 75,
         "Mumbai Metro": 80,
@@ -386,7 +386,7 @@
       "description": "Premium blend of Assam CTC and long leaf tea for a rich, aromatic cup of chai.",
       "category": "groceries",
       "price": 310,
-      "image_url": "https://picsum.photos/seed/retailsync-groc-005/600/600",
+      "image_url": null,
       "inventory": {
         "Bangalore Central": 120,
         "Mumbai Metro": 110,
@@ -399,7 +399,7 @@
       "description": "Pure instant coffee granules with a strong taste and rich aroma.",
       "category": "groceries",
       "price": 590,
-      "image_url": "https://picsum.photos/seed/retailsync-groc-006/600/600",
+      "image_url": null,
       "inventory": {
         "Bangalore Central": 60,
         "Mumbai Metro": 55,
@@ -412,7 +412,7 @@
       "description": "Light and healthy refined sunflower cooking oil rich in vitamins A and D.",
       "category": "groceries",
       "price": 165,
-      "image_url": "https://picsum.photos/seed/retailsync-groc-007/600/600",
+      "image_url": null,
       "inventory": {
         "Bangalore Central": 140,
         "Mumbai Metro": 130,
@@ -425,7 +425,7 @@
       "description": "Crispy spiced potato and gram flour namkeen snack.",
       "category": "groceries",
       "price": 120,
-      "image_url": "https://picsum.photos/seed/retailsync-groc-008/600/600",
+      "image_url": null,
       "inventory": {
         "Bangalore Central": 100,
         "Mumbai Metro": 90,
@@ -438,7 +438,7 @@
       "description": "Certified organic, gluten-free quinoa, a protein-rich alternative to rice.",
       "category": "groceries",
       "price": 349,
-      "image_url": "https://picsum.photos/seed/retailsync-groc-009/600/600",
+      "image_url": null,
       "inventory": {
         "Bangalore Central": 30,
         "Mumbai Metro": 1
@@ -450,7 +450,7 @@
       "description": "Crunchy breakfast cereal made from golden corn, fortified with iron and vitamins.",
       "category": "groceries",
       "price": 375,
-      "image_url": "https://picsum.photos/seed/retailsync-groc-010/600/600",
+      "image_url": null,
       "inventory": {
         "Bangalore Central": 70,
         "Mumbai Metro": 65,
@@ -463,7 +463,7 @@
       "description": "Smooth and creamy milk chocolate bar. Currently sold out in every store.",
       "category": "groceries",
       "price": 175,
-      "image_url": "https://picsum.photos/seed/retailsync-groc-011/600/600",
+      "image_url": null,
       "inventory": {
         "Bangalore Central": 0,
         "Mumbai Metro": 0,
@@ -476,7 +476,7 @@
       "description": "Pressure cooker with a deep lid that controls spillage, plus a gasket-release safety system.",
       "category": "home-goods",
       "price": 2399,
-      "image_url": "https://picsum.photos/seed/retailsync-home-001/600/600",
+      "image_url": null,
       "inventory": {
         "Bangalore Central": 20,
         "Mumbai Metro": 18,
@@ -489,7 +489,7 @@
       "description": "Double-wall vacuum insulated stainless steel bottle that keeps drinks hot or cold for 24 hours.",
       "category": "home-goods",
       "price": 1099,
-      "image_url": "https://picsum.photos/seed/retailsync-home-002/600/600",
+      "image_url": null,
       "inventory": {
         "Bangalore Central": 45,
         "Mumbai Metro": 40,
@@ -502,7 +502,7 @@
       "description": "Powerful mixer grinder with three stainless steel jars and a turbo motor for wet and dry grinding.",
       "category": "home-goods",
       "price": 4199,
-      "image_url": "https://picsum.photos/seed/retailsync-home-003/600/600",
+      "image_url": null,
       "inventory": {
         "Bangalore Central": 10,
         "Mumbai Metro": 9,
@@ -515,7 +515,7 @@
       "description": "Induction-friendly non-stick kadai, fry pan and tawa with heat-resistant handles.",
       "category": "home-goods",
       "price": 1299,
-      "image_url": "https://picsum.photos/seed/retailsync-home-004/600/600",
+      "image_url": null,
       "inventory": {
         "Bangalore Central": 25,
         "Mumbai Metro": 22,
@@ -528,7 +528,7 @@
       "description": "Soft 144 thread count cotton double bedsheet with two matching pillow covers.",
       "category": "home-goods",
       "price": 1499,
-      "image_url": "https://picsum.photos/seed/retailsync-home-005/600/600",
+      "image_url": null,
       "inventory": {
         "Bangalore Central": 30,
         "Delhi Hub": 26
@@ -540,7 +540,7 @@
       "description": "Quick-dry, highly absorbent microfibre bath towels that stay soft wash after wash.",
       "category": "home-goods",
       "price": 899,
-      "image_url": "https://picsum.photos/seed/retailsync-home-006/600/600",
+      "image_url": null,
       "inventory": {
         "Bangalore Central": 50,
         "Mumbai Metro": 45,
@@ -553,7 +553,7 @@
       "description": "Lightweight cordless stick vacuum with laser dust detection and an LCD particle counter.",
       "category": "home-goods",
       "price": 52900,
-      "image_url": "https://picsum.photos/seed/retailsync-home-007/600/600",
+      "image_url": null,
       "inventory": {
         "Bangalore Central": 1,
         "Mumbai Metro": 2,
@@ -566,7 +566,7 @@
       "description": "Medium-firm memory foam mattress with orthopaedic support for a restful sleep.",
       "category": "home-goods",
       "price": 18999,
-      "image_url": "https://picsum.photos/seed/retailsync-home-008/600/600",
+      "image_url": null,
       "inventory": {
         "Bangalore Central": 4,
         "Mumbai Metro": 3,
@@ -579,7 +579,7 @@
       "description": "Microwave-safe borosilicate glass bowls for mixing, baking and serving.",
       "category": "home-goods",
       "price": 799,
-      "image_url": "https://picsum.photos/seed/retailsync-home-009/600/600",
+      "image_url": null,
       "inventory": {
         "Bangalore Central": 35,
         "Mumbai Metro": 30,
@@ -592,7 +592,7 @@
       "description": "Energy-saving BLDC ceiling fan with remote control and silent operation.",
       "category": "home-goods",
       "price": 3299,
-      "image_url": "https://picsum.photos/seed/retailsync-home-010/600/600",
+      "image_url": null,
       "inventory": {
         "Bangalore Central": 12,
         "Mumbai Metro": 15,
@@ -605,7 +605,7 @@
       "description": "App and voice controlled smart bulb with 16 million colours and tunable white light.",
       "category": "home-goods",
       "price": 699,
-      "image_url": "https://picsum.photos/seed/retailsync-home-011/600/600",
+      "image_url": null,
       "inventory": {
         "Bangalore Central": 80,
         "Mumbai Metro": 70,
@@ -618,7 +618,7 @@
       "description": "Lightweight graphite badminton racket with an aerodynamic frame for fast swings.",
       "category": "sports-fitness",
       "price": 2490,
-      "image_url": "https://picsum.photos/seed/retailsync-sprt-001/600/600",
+      "image_url": null,
       "inventory": {
         "Bangalore Central": 20,
         "Mumbai Metro": 15,
@@ -631,7 +631,7 @@
       "description": "Machine-stitched training and match football with a durable rubberised bladder.",
       "category": "sports-fitness",
       "price": 899,
-      "image_url": "https://picsum.photos/seed/retailsync-sprt-002/600/600",
+      "image_url": null,
       "inventory": {
         "Bangalore Central": 30,
         "Mumbai Metro": 25,
@@ -644,7 +644,7 @@
       "description": "Full-size Kashmir willow bat with a cane handle, ready to play out of the box.",
       "category": "sports-fitness",
       "price": 2299,
-      "image_url": "https://picsum.photos/seed/retailsync-sprt-003/600/600",
+      "image_url": null,
       "inventory": {
         "Bangalore Central": 15,
         "Mumbai Metro": 12,
@@ -657,7 +657,7 @@
       "description": "Cushioned NBR yoga and exercise mat with an anti-slip texture and carry strap.",
       "category": "sports-fitness",
       "price": 599,
-      "image_url": "https://picsum.photos/seed/retailsync-sprt-004/600/600",
+      "image_url": null,
       "inventory": {
         "Bangalore Central": 60,
         "Mumbai Metro": 55,
@@ -670,7 +670,7 @@
       "description": "Home gym dumbbell set with adjustable plates, two rods and spin-lock collars.",
       "category": "sports-fitness",
       "price": 1799,
-      "image_url": "https://picsum.photos/seed/retailsync-sprt-005/600/600",
+      "image_url": null,
       "inventory": {
         "Bangalore Central": 10,
         "Mumbai Metro": 8,
@@ -683,7 +683,7 @@
       "description": "Rubber moulded basketball with a deep channel design for outdoor courts.",
       "category": "sports-fitness",
       "price": 749,
-      "image_url": "https://picsum.photos/seed/retailsync-sprt-006/600/600",
+      "image_url": null,
       "inventory": {
         "Bangalore Central": 25,
         "Delhi Hub": 20
@@ -695,7 +695,7 @@
       "description": "Front-suspension mountain bike with 21-speed Shimano gears and dual disc brakes.",
       "category": "sports-fitness",
       "price": 8999,
-      "image_url": "https://picsum.photos/seed/retailsync-sprt-007/600/600",
+      "image_url": null,
       "inventory": {
         "Bangalore Central": 3,
         "Mumbai Metro": 2,
@@ -708,7 +708,7 @@
       "description": "Dual-wheel abdominal roller with a knee mat for core strength workouts.",
       "category": "sports-fitness",
       "price": 499,
-      "image_url": "https://picsum.photos/seed/retailsync-sprt-008/600/600",
+      "image_url": null,
       "inventory": {
         "Bangalore Central": 40,
         "Mumbai Metro": 35,
@@ -721,7 +721,7 @@
       "description": "Anti-fog, UV-protected swim goggles with an adjustable split strap.",
       "category": "sports-fitness",
       "price": 1150,
-      "image_url": "https://picsum.photos/seed/retailsync-sprt-009/600/600",
+      "image_url": null,
       "inventory": {
         "Bangalore Central": 18,
         "Mumbai Metro": 22,
@@ -734,7 +734,7 @@
       "description": "Foldable home treadmill with a 2HP motor, 12 preset programs and a heart-rate sensor.",
       "category": "sports-fitness",
       "price": 27999,
-      "image_url": "https://picsum.photos/seed/retailsync-sprt-010/600/600",
+      "image_url": null,
       "inventory": {
         "Bangalore Central": 2,
         "Mumbai Metro": 1,
@@ -747,7 +747,7 @@
       "description": "Bestselling guide to building good habits and breaking bad ones through tiny changes.",
       "category": "books-stationery",
       "price": 499,
-      "image_url": "https://picsum.photos/seed/retailsync-book-001/600/600",
+      "image_url": null,
       "inventory": {
         "Bangalore Central": 40,
         "Mumbai Metro": 35,
@@ -760,7 +760,7 @@
       "description": "Timeless lessons on wealth, greed and happiness told through short stories.",
       "category": "books-stationery",
       "price": 399,
-      "image_url": "https://picsum.photos/seed/retailsync-book-002/600/600",
+      "image_url": null,
       "inventory": {
         "Bangalore Central": 30,
         "Mumbai Metro": 28,
@@ -773,7 +773,7 @@
       "description": "Autobiography of India's Missile Man and former President, Dr. A.P.J. Abdul Kalam.",
       "category": "books-stationery",
       "price": 299,
-      "image_url": "https://picsum.photos/seed/retailsync-book-003/600/600",
+      "image_url": null,
       "inventory": {
         "Bangalore Central": 25,
         "Mumbai Metro": 20,
@@ -786,7 +786,7 @@
       "description": "Single-line ruled A5 spiral notebooks with 160 pages of smooth paper each.",
       "category": "books-stationery",
       "price": 360,
-      "image_url": "https://picsum.photos/seed/retailsync-book-004/600/600",
+      "image_url": null,
       "inventory": {
         "Bangalore Central": 100,
         "Mumbai Metro": 90,
@@ -799,7 +799,7 @@
       "description": "Classic stainless steel fountain pen with a smooth nib and a refillable ink cartridge.",
       "category": "books-stationery",
       "price": 350,
-      "image_url": "https://picsum.photos/seed/retailsync-book-005/600/600",
+      "image_url": null,
       "inventory": {
         "Bangalore Central": 50,
         "Mumbai Metro": 45,
@@ -812,7 +812,7 @@
       "description": "Washable sketch pens that clip together, ideal for colouring and school projects.",
       "category": "books-stationery",
       "price": 300,
-      "image_url": "https://picsum.photos/seed/retailsync-book-006/600/600",
+      "image_url": null,
       "inventory": {
         "Bangalore Central": 60,
         "Delhi Hub": 50
@@ -824,7 +824,7 @@
       "description": "Smooth, vibrant oil pastels for blending and layering in art and craft.",
       "category": "books-stationery",
       "price": 260,
-      "image_url": "https://picsum.photos/seed/retailsync-book-007/600/600",
+      "image_url": null,
       "inventory": {
         "Bangalore Central": 1,
         "Mumbai Metro": 40,

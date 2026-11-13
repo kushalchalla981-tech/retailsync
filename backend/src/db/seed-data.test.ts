@@ -75,12 +75,12 @@ describe('shipped seed catalog', () => {
     );
   });
 
-  it('has plausible product data (unique names, descriptions, positive INR prices, https images)', () => {
+  it('has plausible product data (unique names, descriptions, positive INR prices, https images when present)', () => {
     assert.equal(new Set(catalog.products.map((p) => p.name)).size, catalog.products.length);
     for (const product of catalog.products) {
       assert.ok(product.description.length >= 30, `${product.sku} description too short`);
       assert.ok(product.price > 0 && product.price < 100_000, `${product.sku} price ${product.price}`);
-      assert.match(product.image_url ?? '', /^https:\/\//);
+      if (product.image_url !== null) assert.match(product.image_url, /^https:\/\//);
     }
     const prices = catalog.products.map((p) => p.price);
     assert.ok(Math.min(...prices) < 500 && Math.max(...prices) > 25_000, 'price range too narrow for range-filter demos');

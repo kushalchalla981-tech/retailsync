@@ -199,7 +199,14 @@ export const api = {
 
 // --- Telemetry feed (phase 3) ----------------------------------------------
 
-function telemetryToLedger(ev: ServerTelemetryEvent) {
+const seenTelemetry = new Set<string>();
+
+function telemetryToLedger(ev: ServerTelemetryEvent & { id?: string }) {
+  // SSE reconnects and polling can both deliver an event; record each id once.
+  if (ev.id) {
+    if (seenTelemetry.has(ev.id)) return;
+    seenTelemetry.add(ev.id);
+  }
   const service: Service = ev.service === 'kafka' ? 'kafka' : ev.service === 'opensearch' ? 'os' : 'pg';
   const fields: [string, string][] = [];
   if (ev.topic) fields.push(['topic', ev.topic]);
