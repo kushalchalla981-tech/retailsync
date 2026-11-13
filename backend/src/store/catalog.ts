@@ -4,7 +4,8 @@
  *
  * Every request-derived value is a `$n` bound parameter; SQL text is constant.
  */
-import { money, type Queryable } from './db.js';
+import { notFound } from '../http/contract.js';
+import { iso, money, type Queryable } from './db.js';
 
 export interface InventoryEntry {
   locationId: string;
@@ -133,4 +134,125 @@ export async function listProducts(db: Queryable, filters: ProductFilters): Prom
     limit: filters.limit,
     offset: filters.offset,
   };
+}
+
+// ---------------------------------------------------------------------------
+// Product detail
+// ---------------------------------------------------------------------------
+
+export const GET_PRODUCT_SQL = `${PRODUCT_SELECT}
+${PRODUCT_FROM}
+ WHERE p.is_active AND p.id = $1::bigint`;
+
+/** One active product in the list shape; 404 PRODUCT_NOT_FOUND otherwise. */
+export async function getProduct(db: Queryable, productId: string): Promise<Product> {
+  const { rows } = await db.query<ProductRow>(GET_PRODUCT_SQL, [productId]);
+  const row = rows[0];
+  if (!row) throw notFound('PRODUCT_NOT_FOUND', `Product ${productId} not found`);
+  return toProduct(row);
+}
+
+// ---------------------------------------------------------------------------
+// Categories and store locations
+// ---------------------------------------------------------------------------
+
+export interface Category {
+  id: string;
+  slug: string;
+  name: string;
+  productCount: number;
+}
+
+export const LIST_CATEGORIES_SQL = `SELECT c.id::text AS id, c.slug, c.name,
+       count(p.id) FILTER (WHERE p.is_active)::int AS product_count
+  FROM categories c
+  LEFT JOIN products p ON p.category_id = c.id
+ GROUP BY c.id
+ ORDER BY c.name`;
+
+export async function listCategories(db: Queryable): Promise<Category[]> {
+  const { rows } = await db.query<{ id: string; slug: string; name: string; product_count: number }>(LIST_CATEGORIES_SQL);
+  return rows.map((row) => ({
+    id: String(row.id),
+    slug: row.slug,
+    name: row.name,
+    productCount: Number(row.product_count),
+  }));
+}
+
+export interface StoreLocation {
+  id: string;
+  name: string;
+  city: string;
+  address: string;
+}
+
+export const LIST_LOCATIONS_SQL = `SELECT l.id::text AS id, l.name, l.city, l.address
+  FROM store_locations l
+ ORDER BY l.city, l.name`;
+
+export async function listLocations(db: Queryable): Promise<StoreLocation[]> {
+  const { rows } = await db.query<StoreLocation>(LIST_LOCATIONS_SQL);
+  return rows.map((row) => ({ id: String(row.id), name: row.name, city: row.city, address: row.address }));
+}
+
+// ---------------------------------------------------------------------------
+// Inventory lookup
+// ---------------------------------------------------------------------------
+
+export interface InventoryRecord {
+  productId: string;
+  sku: string;
+  productName: string;
+  locationId: string;
+  locationName: string;
+  city: string;
+  stockQuantity: number;
+  inStock: boolean;
+  updatedAt: string;
+}
+
+export interface InventoryFilters {
+  productId?: string | undefined;
+  locationId?: string | undefined;
+}
+
+/**
+ * $1 product id, $2 location id (either may be null; the route requires at
+ * least one). Raw stock view: rows for inactive products are included too.
+ */
+export const LOOKUP_INVENTORY_SQL = `SELECT i.product_id::text AS product_id, p.sku, p.name AS product_name,
+       i.location_id::text AS location_id, l.name AS location_name, l.city,
+       i.stock_quantity, i.updated_at
+  FROM inventory i
+  JOIN products p ON p.id = i.product_id
+  JOIN store_locations l ON l.id = i.location_id
+ WHERE ($1::bigint IS NULL OR i.product_id = $1::bigint)
+   AND ($2::bigint IS NULL OR i.location_id = $2::bigint)
+ ORDER BY i.product_id, i.location_id`;
+
+interface InventoryRow {
+  product_id: string;
+  sku: string;
+  product_name: string;
+  location_id: string;
+  location_name: string;
+  city: string;
+  stock_quantity: number;
+  updated_at: Date | string;
+}
+
+export async function lookupInventory(db: Queryable, filters: InventoryFilters): Promise<InventoryRecord[]> {
+  const { rows } = await db.query<InventoryRow>(LOOKUP_INVENTORY_SQL, [filters.productId ?? null, filters.locationId ?? null]);
+  return rows.map((row) => ({
+    productId: String(row.product_id),
+    sku: row.sku,
+    productName: row.product_name,
+    locationId: String(row.location_id),
+    locationName: row.location_name,
+    city: row.city,
+    stockQuantity: Number(row.stock_quantity),
+    inStock: Number(row.stock_quantity) > 0,
+    updatedAt: iso(row.updated_at),
+  }));
 }

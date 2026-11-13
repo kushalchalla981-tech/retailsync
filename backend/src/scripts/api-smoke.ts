@@ -155,6 +155,78 @@ export const catalogSteps: SmokeStep[] = [
       return `issues: ${result.body.error.details.issues.map((issue: Json) => issue.path).join(', ')}`;
     },
   },
+  {
+    name: 'GET /api/categories',
+    async run({ app }) {
+      const result = await call(app, 'GET', '/api/categories');
+      expectStatus(result, 200, 'list categories');
+      const items: Json[] = result.body.items;
+      expect(Array.isArray(items) && items.length === 6, `expected 6 categories, got ${items?.length}`);
+      const electronics = items.find((item) => item.slug === 'electronics');
+      expect(electronics, 'electronics category missing');
+      expect(typeof electronics.productCount === 'number' && electronics.productCount >= 1, 'electronics productCount must be >= 1');
+      return `${items.length} categories, electronics has ${electronics.productCount} active product(s)`;
+    },
+  },
+  {
+    name: 'GET /api/locations',
+    async run({ app, state }) {
+      const result = await call(app, 'GET', '/api/locations');
+      expectStatus(result, 200, 'list locations');
+      const items: Json[] = result.body.items;
+      expect(Array.isArray(items) && items.length === 3, `expected 3 locations, got ${items?.length}`);
+      for (const item of items) state.locations[item.name] = item.id;
+      expect(state.locations['Bangalore Central'], 'Bangalore Central missing');
+      return items.map((item) => `${item.name} (${item.city}) #${item.id}`).join(', ');
+    },
+  },
+  {
+    name: 'GET /api/products/{ELEC-009}',
+    async run({ app, state }) {
+      const ps5Id = requireValue(state.ps5Id, 'ELEC-009 id');
+      const result = await call(app, 'GET', `/api/products/${ps5Id}`);
+      expectStatus(result, 200, 'product detail');
+      expect(result.body.product?.sku === 'ELEC-009', 'expected sku ELEC-009');
+      return `${result.body.product.name}, price ${result.body.product.price}, totalStock ${result.body.product.totalStock}`;
+    },
+  },
+  {
+    name: 'GET /api/products/999999999 -> 404 PRODUCT_NOT_FOUND',
+    async run({ app }) {
+      const result = await call(app, 'GET', '/api/products/999999999');
+      expectStatus(result, 404, 'unknown product');
+      expect(result.body?.error?.code === 'PRODUCT_NOT_FOUND', 'error.code must be PRODUCT_NOT_FOUND');
+    },
+  },
+  {
+    name: 'GET /api/inventory?productId={ELEC-009}&locationId={Bangalore Central}',
+    async run({ app, state }) {
+      const ps5Id = requireValue(state.ps5Id, 'ELEC-009 id');
+      const bangaloreId = requireValue(state.locations['Bangalore Central'], 'Bangalore Central id');
+      const result = await call(app, 'GET', `/api/inventory?productId=${ps5Id}&locationId=${bangaloreId}`);
+      expectStatus(result, 200, 'inventory lookup');
+      const items: Json[] = result.body.items;
+      expect(Array.isArray(items) && items.length === 1, `expected exactly 1 inventory row, got ${items?.length}`);
+      expect(Number.isInteger(items[0].stockQuantity) && items[0].stockQuantity >= 0, 'stockQuantity must be an integer >= 0');
+      return `stockQuantity ${items[0].stockQuantity}`;
+    },
+  },
+  {
+    name: 'GET /api/products?locationId={Bangalore Central}',
+    async run({ app, state }) {
+      const bangaloreId = requireValue(state.locations['Bangalore Central'], 'Bangalore Central id');
+      const result = await call(app, 'GET', `/api/products?locationId=${bangaloreId}&limit=100`);
+      expectStatus(result, 200, 'list by location');
+      const items: Json[] = result.body.items;
+      expect(Array.isArray(items) && items.length >= 1, 'expected at least 1 product at Bangalore Central');
+      expect(
+        items.every((item) => item.inventory.some((entry: Json) => entry.locationId === bangaloreId)),
+        'every item must carry an inventory entry for Bangalore Central',
+      );
+      for (const item of items) state.products[item.sku] = { id: item.id, price: item.price };
+      return `${items.length} item(s)`;
+    },
+  },
 ];
 
 /** Every step, in order. Later plans append their steps here. */
