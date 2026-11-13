@@ -1,95 +1,137 @@
-export type City = 'Bangalore' | 'Mumbai' | 'Delhi';
+// Shapes mirror backend/src/store/*.ts and the 02-02 / phase-3 plan contracts.
+
+export interface Category {
+  id: string;
+  slug: string;
+  name: string;
+  productCount: number;
+}
 
 export interface StoreLocation {
   id: string;
   name: string;
-  city: City;
+  city: string;
   address: string;
 }
 
-export interface InventoryRecord {
-  city: City;
-  stock: number;
+export interface InventoryEntry {
+  locationId: string;
+  locationName: string;
+  city: string;
+  stockQuantity: number;
 }
 
 export interface Product {
   id: string;
   sku: string;
-  title: string;
+  name: string;
   description: string;
-  category: 'Electronics' | 'Footwear & Apparel' | 'Home Goods' | 'Gourmet Grocery';
-  price: number; // in INR ₹
-  image: string;
-  rating: number;
-  inventory: Record<City, number>;
-  tags: string[];
+  price: number;
+  imageUrl: string | null;
+  category: { id: string; slug: string; name: string };
+  inventory: InventoryEntry[];
+  totalStock: number;
+  inStock: boolean;
+}
+
+export interface ProductPage {
+  items: Product[];
+  total: number;
+  limit: number;
+  offset: number;
+}
+
+export interface InventoryRecord {
+  productId: string;
+  sku: string;
+  productName: string;
+  locationId: string;
+  locationName: string;
+  city: string;
+  stockQuantity: number;
+  inStock: boolean;
+  updatedAt: string;
 }
 
 export interface CartItem {
-  product: Product;
+  productId: string;
+  sku: string;
+  name: string;
+  imageUrl: string | null;
+  unitPrice: number;
   quantity: number;
-  selectedCity: City;
+  lineTotal: number;
+  availableQuantity: number;
+}
+
+export interface Cart {
+  id: string;
+  status: 'active' | 'checked_out' | 'abandoned';
+  locationId: string | null;
+  location: { id: string; name: string; city: string } | null;
+  orderId: string | null;
+  items: CartItem[];
+  itemCount: number;
+  subtotal: number;
+  createdAt: string;
+  updatedAt: string;
 }
 
 export interface OrderItem {
   productId: string;
-  title: string;
+  sku: string;
+  name: string;
   quantity: number;
   unitPrice: number;
-  totalPrice: number;
+  lineTotal: number;
 }
 
 export interface Order {
   id: string;
-  customerName: string;
-  customerEmail: string;
-  city: City;
+  status: string;
+  paymentStatus: string;
+  cartId: string;
+  customer: { id: string; name: string };
+  location: { id: string; name: string; city: string };
   items: OrderItem[];
   totalAmount: number;
-  status: 'PENDING' | 'COMMITTED' | 'FAILED_OUT_OF_STOCK';
   createdAt: string;
-  postgresTxId: string;
-  kafkaOffset?: number;
+  /** Optional server timing, shown only when the backend reports it. */
+  lockWaitMs?: number;
 }
 
-// Telemetry Types for Aiven Hackathon P1 (Postgres, Kafka, OpenSearch)
-export interface PostgresTxLog {
-  id: string;
-  timestamp: string;
-  txId: string;
-  query: string;
-  latencyMs: number;
-  status: 'COMMITTED' | 'ACQUIRING_LOCK' | 'ROLLEDBACK';
-  lockAcquired: boolean;
-  affectedRows: number;
+export interface CheckoutResult {
+  order: Order;
+  replayed: boolean;
 }
 
-export interface KafkaMessageLog {
-  id: string;
-  timestamp: string;
-  topic: 'orders.placed' | 'inventory.updated';
-  partition: number;
-  offset: number;
-  key: string;
-  payload: Record<string, any>;
+/** Phase 3 search contract (planned). Every field optional-tolerant. */
+export interface SearchResult {
+  items: Product[];
+  total: number;
+  tookMs?: number;
+  took?: number;
+  facets?: Record<string, { key: string; count: number }[]>;
 }
 
-export interface OpenSearchSyncLog {
-  id: string;
-  timestamp: string;
-  action: 'INDEX' | 'UPDATE_STOCK' | 'QUERY';
-  index: string;
-  docId: string;
-  latencyMs: number;
-  queryDSL?: Record<string, any>;
-  score?: number;
+export interface ApiErrorBody {
+  error: { code: string; message: string; details?: Record<string, unknown>; requestId: string };
 }
 
-export interface TelemetryStats {
-  postgresTotalTxs: number;
-  postgresActiveLocks: number;
-  kafkaMessagesTotal: number;
-  kafkaLag: number;
-  openSearchTotalDocs: number;
-  openSearchAvgQueryMs: number;
+/** Server telemetry event (phase 3 plan; parsed defensively). */
+export interface ServerTelemetryEvent {
+  service: 'postgres' | 'kafka' | 'opensearch';
+  type: string;
+  at?: string;
+  topic?: string;
+  partition?: number;
+  offset?: number | string;
+  lockWaitMs?: number;
+  latencyMs?: number;
+  orderId?: string;
+  productId?: string;
+  sku?: string;
+  stockBefore?: number;
+  stockAfter?: number;
+  message?: string;
 }

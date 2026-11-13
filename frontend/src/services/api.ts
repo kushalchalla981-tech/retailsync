@@ -1,379 +1,291 @@
-import { Product, City, Order, CartItem } from '../types';
-import { INITIAL_PRODUCTS } from '../data/mockData';
-import { telemetryStore } from './telemetryStore';
+/**
+ * The single typed client for the RetailSync Fastify API (/api prefix).
+ * Every call is timed in the browser and written to the live ledger, so
+ * each figure on screen traces back to a real request.
+ */
+import type {
+  ApiErrorBody,
+  Cart,
+  Category,
+  CheckoutResult,
+  InventoryRecord,
+  Order,
+  Product,
+  ProductPage,
+  SearchResult,
+  ServerTelemetryEvent,
+  StoreLocation,
+} from '../types';
+import { record, setFeed, type Service } from './ledger';
 
-class ApiService {
-  private products: Product[] = JSON.parse(JSON.stringify(INITIAL_PRODUCTS));
-  private orders: Order[] = [];
-  private orderSeq = 1001;
+const BASE: string = (import.meta.env.VITE_API_BASE as string | undefined) ?? '';
 
-  public getProducts(): Product[] {
-    return this.products;
+export class ApiError extends Error {
+  constructor(
+    readonly status: number,
+    readonly code: string,
+    message: string,
+    readonly details?: Record<string, unknown>,
+    readonly requestId?: string,
+  ) {
+    super(message);
+    this.name = 'ApiError';
   }
-
-  public getProduct(id: string): Product | undefined {
-    return this.products.find((p) => p.id === id);
-  }
-
-  /**
-   * OpenSearch Typo-Tolerant Fuzzy Search Engine Simulation
-   * Replicates OpenSearch multi_match query with fuzziness: AUTO
-   */
-  public searchProducts(query: string, category?: string, city?: City, maxPrice?: number): {
-    results: Product[];
-    typoCorrectedFrom?: string;
-    matchedTerm?: string;
-    latencyMs: number;
-  } {
-    const start = performance.now();
-    const cleanQuery = query.trim().toLowerCase();
-
-    // Typo mapping lexicon for common e-commerce search misspellings
-    const typoDictionary: Record<string, string> = {
-      snikers: 'sneakers',
-      sneeker: 'sneakers',
-      sneekers: 'sneakers',
-      jordon: 'jordan',
-      jordin: 'jordan',
-      hedphone: 'headphones',
-      headfones: 'headphones',
-      headfone: 'headphones',
-      smrtphone: 'macbook',
-      kyboard: 'keyboard',
-      keybrd: 'keyboard',
-      cofee: 'coffee',
-      espreso: 'espresso',
-      vaccum: 'vacuum',
-      vacum: 'vacuum',
-      safron: 'saffron',
-      safrn: 'saffron',
-    };
-
-    let effectiveQuery = cleanQuery;
-    let typoCorrectedFrom: string | undefined = undefined;
-
-    if (cleanQuery && typoDictionary[cleanQuery]) {
-      typoCorrectedFrom = cleanQuery;
-      effectiveQuery = typoDictionary[cleanQuery];
-    }
-
-    let filtered = this.products.filter((product) => {
-      // Category filter
-      if (category && category !== 'All' && product.category !== category) {
-        return false;
-      }
-
-      // Max price filter
-      if (maxPrice && product.price > maxPrice) {
-        return false;
-      }
-
-      // City stock availability filter
-      if (city && product.inventory[city] === 0) {
-        return false;
-      }
-
-      // Text query match
-      if (!effectiveQuery) return true;
-
-      const titleMatch = product.title.toLowerCase().includes(effectiveQuery);
-      const descMatch = product.description.toLowerCase().includes(effectiveQuery);
-      const tagMatch = product.tags.some((tag) => tag.toLowerCase().includes(effectiveQuery));
-
-      // Fuzzy fuzzy distance check for ~1-2 edits
-      const fuzzyMatch = this.checkFuzzyMatch(product.title.toLowerCase(), effectiveQuery) ||
-                         product.tags.some(tag => this.checkFuzzyMatch(tag.toLowerCase(), effectiveQuery));
-
-      return titleMatch || descMatch || tagMatch || fuzzyMatch;
-    });
-
-    const latencyMs = Math.round((performance.now() - start + 4 + Math.random() * 8) * 10) / 10;
-
-    // Log to OpenSearch telemetry
-    if (query.trim()) {
-      telemetryStore.logOpenSearch(
-        'QUERY',
-        `search_${Date.now()}`,
-        latencyMs,
-        {
-          query: {
-            bool: {
-              must: [
-                {
-                  multi_match: {
-                    query: cleanQuery,
-                    fields: ['title^3', 'description', 'tags^2'],
-                    fuzziness: 'AUTO',
-                  },
-                },
-              ],
-              filter: [
-                ...(category && category !== 'All' ? [{ term: { category } }] : []),
-                ...(city ? [{ range: { [`inventory.${city}`]: { gt: 0 } } }] : []),
-                ...(maxPrice ? [{ range: { price: { lte: maxPrice } } }] : []),
-              ],
-            },
-          },
-        },
-        filtered.length > 0 ? 3.95 : 0.0
-      );
-    }
-
-    return {
-      results: filtered,
-      typoCorrectedFrom,
-      matchedTerm: effectiveQuery !== cleanQuery ? effectiveQuery : undefined,
-      latencyMs,
-    };
-  }
-
-  private checkFuzzyMatch(text: string, query: string): boolean {
-    if (query.length < 3) return false;
-    const words = text.split(/\s+/);
-    for (const word of words) {
-      if (this.levenshtein(word, query) <= (query.length > 5 ? 2 : 1)) {
-        return true;
-      }
-    }
-    return false;
-  }
-
-  private levenshtein(a: string, b: string): number {
-    const matrix: number[][] = [];
-    for (let i = 0; i <= b.length; i++) matrix[i] = [i];
-    for (let j = 0; j <= a.length; j++) matrix[0][j] = j;
-
-    for (let i = 1; i <= b.length; i++) {
-      for (let j = 1; j <= a.length; j++) {
-        if (b.charAt(i - 1) === a.charAt(j - 1)) {
-          matrix[i][j] = matrix[i - 1][j - 1];
-        } else {
-          matrix[i][j] = Math.min(
-            matrix[i - 1][j - 1] + 1,
-            Math.min(matrix[i][j - 1] + 1, matrix[i - 1][j] + 1)
-          );
-        }
-      }
-    }
-    return matrix[b.length][a.length];
-  }
-
-  /**
-   * Atomic Order Checkout with PostgreSQL Row-Level Lock simulation (SELECT ... FOR UPDATE)
-   * Guaranteed Zero Oversell Protection
-   */
-  public async checkout(params: {
-    customerName: string;
-    customerEmail: string;
-    city: City;
-    items: CartItem[];
-  }): Promise<{ success: boolean; order?: Order; error?: string }> {
-    const txStart = performance.now();
-    const orderId = `ORD-${this.orderSeq++}`;
-
-    // 1. PostgreSQL BEGIN Transaction
-    const txId = telemetryStore.logPostgres(
-      `BEGIN; -- Transaction isolation LEVEL REPEATABLE READ`,
-      'COMMITTED',
-      0.8,
-      false,
-      0
-    );
-
-    // 2. PostgreSQL SELECT ... FOR UPDATE (Acquiring Row Locks)
-    for (const item of params.items) {
-      telemetryStore.logPostgres(
-        `SELECT stock_quantity FROM inventory WHERE product_id = '${item.product.id}' AND city = '${params.city}' FOR UPDATE;`,
-        'ACQUIRING_LOCK',
-        1.5,
-        true,
-        1
-      );
-    }
-
-    // Small simulated lock evaluation time
-    await new Promise((r) => setTimeout(r, 60));
-
-    // 3. Stock Check Verification under Lock
-    for (const item of params.items) {
-      const liveProduct = this.products.find((p) => p.id === item.product.id);
-      if (!liveProduct) {
-        telemetryStore.logPostgres('ROLLBACK; -- Product not found', 'ROLLEDBACK', 0.5, false, 0);
-        return { success: false, error: `Product not found: ${item.product.title}` };
-      }
-
-      const availableStock = liveProduct.inventory[params.city] || 0;
-      if (availableStock < item.quantity) {
-        // ROLLBACK transaction immediately!
-        telemetryStore.logPostgres(
-          `ROLLBACK; -- INSUFFICIENT STOCK: product ${item.product.sku} has ${availableStock} units, requested ${item.quantity}. Oversell prevented!`,
-          'ROLLEDBACK',
-          0.9,
-          false,
-          0
-        );
-
-        return {
-          success: false,
-          error: `Insufficient stock for "${item.product.title}" in ${params.city} (Available: ${availableStock}). Transaction rolled back with 0 inventory loss.`,
-        };
-      }
-    }
-
-    // 4. Stock is verified: Deduct inventory and insert order records
-    for (const item of params.items) {
-      const liveProduct = this.products.find((p) => p.id === item.product.id)!;
-      liveProduct.inventory[params.city] -= item.quantity;
-
-      telemetryStore.logPostgres(
-        `UPDATE inventory SET stock_quantity = stock_quantity - ${item.quantity}, updated_at = NOW() WHERE product_id = '${item.product.id}' AND city = '${params.city}';`,
-        'COMMITTED',
-        1.9,
-        false,
-        1
-      );
-    }
-
-    // 5. Commit Transaction
-    const txLatency = Math.round((performance.now() - txStart) * 10) / 10;
-    telemetryStore.logPostgres(
-      `INSERT INTO orders (id, customer_email, city, total) VALUES ('${orderId}', '${params.customerEmail}', '${params.city}', ...); COMMIT;`,
-      'COMMITTED',
-      txLatency,
-      false,
-      params.items.length
-    );
-
-    const totalAmount = params.items.reduce(
-      (sum, item) => sum + item.product.price * item.quantity,
-      0
-    );
-
-    const order: Order = {
-      id: orderId,
-      customerName: params.customerName,
-      customerEmail: params.customerEmail,
-      city: params.city,
-      items: params.items.map((i) => ({
-        productId: i.product.id,
-        title: i.product.title,
-        quantity: i.quantity,
-        unitPrice: i.product.price,
-        totalPrice: i.product.price * i.quantity,
-      })),
-      totalAmount,
-      status: 'COMMITTED',
-      createdAt: new Date().toLocaleTimeString(),
-      postgresTxId: txId,
-    };
-
-    this.orders.unshift(order);
-
-    // 6. Produce Kafka Event: orders.placed
-    const kafkaOffset = telemetryStore.logKafka('orders.placed', orderId, {
-      orderId,
-      customer: params.customerName,
-      city: params.city,
-      totalAmount,
-      itemCount: params.items.length,
-      postgresTxId: txId,
-      timestamp: new Date().toISOString(),
-    });
-    order.kafkaOffset = kafkaOffset;
-
-    // 7. Kafka Consumer Reacts: Emits inventory.updated & Syncs OpenSearch
-    setTimeout(() => {
-      for (const item of params.items) {
-        const liveProduct = this.products.find((p) => p.id === item.product.id)!;
-        const newStock = liveProduct.inventory[params.city];
-
-        telemetryStore.logKafka('inventory.updated', liveProduct.sku, {
-          sku: liveProduct.sku,
-          productId: liveProduct.id,
-          city: params.city,
-          newStock,
-          delta: -item.quantity,
-          sourceEvent: 'order.placed',
-          consumerGroup: 'inventory-sync-service',
-        });
-
-        // 8. OpenSearch document update
-        telemetryStore.logOpenSearch('UPDATE_STOCK', liveProduct.id, 9.4, {
-          doc: {
-            inventory: liveProduct.inventory,
-            in_stock: Object.values(liveProduct.inventory).some((s) => s > 0),
-          },
-        });
-      }
-    }, 150);
-
-    return { success: true, order };
-  }
-
-  /**
-   * Concurrency Flash-Sale Simulator for Hackathon Judges
-   * Simulates two customers clicking "Place Order" at the exact same millisecond
-   * for the last remaining unit (stock = 1).
-   */
-  public async simulateFlashSaleRace(
-    productId: string,
-    city: City
-  ): Promise<{
-    productTitle: string;
-    user1Result: { success: boolean; message: string; txId?: string };
-    user2Result: { success: boolean; message: string; txId?: string };
-  }> {
-    const product = this.products.find((p) => p.id === productId);
-    if (!product) throw new Error('Product not found');
-
-    const item: CartItem = { product, quantity: 1, selectedCity: city };
-
-    // Fire 2 simultaneous checkouts with slight jitter
-    const p1 = this.checkout({
-      customerName: 'User A (Speedy Buyer)',
-      customerEmail: 'user.a@flashdeal.io',
-      city,
-      items: [item],
-    });
-
-    // User B attempts 10ms later
-    const p2 = new Promise<{ success: boolean; order?: Order; error?: string }>((resolve) => {
-      setTimeout(async () => {
-        const res = await this.checkout({
-          customerName: 'User B (Concurrent Buyer)',
-          customerEmail: 'user.b@flashdeal.io',
-          city,
-          items: [item],
-        });
-        resolve(res);
-      }, 15);
-    });
-
-    const [res1, res2] = await Promise.all([p1, p2]);
-
-    return {
-      productTitle: product.title,
-      user1Result: {
-        success: res1.success,
-        message: res1.success
-          ? `Order #${res1.order?.id} confirmed! Stock reserved via Postgres row lock.`
-          : `Failed: ${res1.error}`,
-        txId: res1.order?.postgresTxId,
-      },
-      user2Result: {
-        success: res2.success,
-        message: res2.success
-          ? `Order #${res2.order?.id} confirmed!`
-          : `Oversell Prevented! ${res2.error}`,
-        txId: res2.order?.postgresTxId,
-      },
-    };
-  }
-
-  public resetCatalog() {
-    this.products = JSON.parse(JSON.stringify(INITIAL_PRODUCTS));
-    telemetryStore.clear();
+  /** Route not deployed yet (as opposed to a missing resource). */
+  get notDeployed() {
+    return this.status === 404 && this.code === 'ROUTE_NOT_FOUND';
   }
 }
 
-export const apiService = new ApiService();
+interface CallOptions {
+  method?: 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE';
+  body?: unknown;
+  service?: Service;
+  /** Skip the generic ledger line (caller writes a richer one). */
+  quiet?: boolean;
+  signal?: AbortSignal;
+}
+
+export interface Timed<T> {
+  data: T;
+  ms: number;
+  status: number;
+}
+
+function query(params: Record<string, string | number | boolean | undefined | null>) {
+  const q = new URLSearchParams();
+  for (const [k, v] of Object.entries(params)) if (v !== undefined && v !== null && v !== '') q.set(k, String(v));
+  const s = q.toString();
+  return s ? `?${s}` : '';
+}
+
+async function call<T>(path: string, opts: CallOptions = {}): Promise<Timed<T>> {
+  const method = opts.method ?? 'GET';
+  const t0 = performance.now();
+  let res: Response;
+  try {
+    res = await fetch(`${BASE}/api${path}`, {
+      method,
+      headers: opts.body === undefined ? undefined : { 'content-type': 'application/json' },
+      body: opts.body === undefined ? undefined : JSON.stringify(opts.body),
+      signal: opts.signal,
+    });
+  } catch (err) {
+    if ((err as Error).name === 'AbortError') throw err;
+    setFeed({ api: 'down' });
+    record({
+      service: 'api',
+      stamp: 'fail',
+      title: `${method} /api${path.split('?')[0]}`,
+      fields: [['result', 'network error, API unreachable']],
+      source: 'client',
+    });
+    throw new ApiError(0, 'NETWORK', 'The RetailSync API is unreachable. Start the backend on port 3000 and retry.');
+  }
+  const ms = performance.now() - t0;
+  setFeed({ api: 'live' });
+  const text = await res.text();
+  let json: unknown = null;
+  try {
+    json = text ? JSON.parse(text) : null;
+  } catch {
+    json = null;
+  }
+  if (!opts.quiet) {
+    record({
+      service: opts.service ?? 'pg',
+      stamp: res.ok ? 'info' : 'fail',
+      title: `${method} /api${path.split('?')[0]}`,
+      fields: [
+        ['status', String(res.status)],
+        ['round trip', `${ms.toFixed(1)} ms`],
+      ],
+      source: 'client',
+    });
+  }
+  if (!res.ok) {
+    const e = (json as ApiErrorBody | null)?.error;
+    throw new ApiError(res.status, e?.code ?? `HTTP_${res.status}`, e?.message ?? res.statusText, e?.details, e?.requestId);
+  }
+  return { data: json as T, ms, status: res.status };
+}
+
+// --- Catalog (PostgreSQL) ---------------------------------------------------
+
+export const api = {
+  categories: async () => (await call<{ items: Category[] }>('/categories')).data.items,
+  locations: async () => (await call<{ items: StoreLocation[] }>('/locations')).data.items,
+  products: async (f: { category?: string; locationId?: string; city?: string; inStock?: boolean; limit?: number; offset?: number }) =>
+    (await call<ProductPage>(`/products${query({ limit: 100, ...f })}`)).data,
+  product: async (id: string) => (await call<{ product: Product }>(`/products/${id}`)).data.product,
+  inventory: async (productId: string, locationId?: string, quiet = false) =>
+    (await call<{ items: InventoryRecord[] }>(`/inventory${query({ productId, locationId })}`, { quiet })).data.items,
+
+  // --- Carts (PostgreSQL, cart-row FOR UPDATE) ---
+  createCart: async (locationId: string, quiet = false) =>
+    (await call<{ cart: Cart }>('/carts', { method: 'POST', body: { locationId }, quiet })).data.cart,
+  getCart: async (cartId: string) => (await call<{ cart: Cart }>(`/carts/${cartId}`)).data.cart,
+  setCartLocation: async (cartId: string, locationId: string) =>
+    (await call<{ cart: Cart }>(`/carts/${cartId}`, { method: 'PATCH', body: { locationId } })).data.cart,
+  addItem: async (cartId: string, productId: string, quantity = 1, quiet = false) =>
+    (await call<{ cart: Cart }>(`/carts/${cartId}/items`, { method: 'POST', body: { productId, quantity }, quiet })).data.cart,
+  setQuantity: async (cartId: string, productId: string, quantity: number) =>
+    (await call<{ cart: Cart }>(`/carts/${cartId}/items/${productId}`, { method: 'PUT', body: { quantity } })).data.cart,
+  removeItem: async (cartId: string, productId: string) =>
+    (await call<{ cart: Cart }>(`/carts/${cartId}/items/${productId}`, { method: 'DELETE' })).data.cart,
+
+  /** Locked ACID checkout (plan 02-02). 201 new order, 200 replay, 409 OUT_OF_STOCK. */
+  checkout: async (cartId: string, customer: { name: string; email: string }, label?: string): Promise<Timed<CheckoutResult>> => {
+    try {
+      const r = await call<CheckoutResult>(`/carts/${cartId}/checkout`, { method: 'POST', body: { customer }, quiet: true });
+      setFeed({ checkout: 'live' });
+      const o = r.data.order;
+      record({
+        service: 'pg',
+        stamp: 'ok',
+        title: r.data.replayed ? 'Checkout replayed, same order returned' : 'Transaction committed',
+        fields: [
+          ...(label ? ([['buyer', label]] as [string, string][]) : []),
+          ['order', short(o.id)],
+          ['store', o.location?.name ?? '—'],
+          ['total', inr(o.totalAmount)],
+          ['lock wait', o.lockWaitMs === undefined ? 'not reported by server' : `${o.lockWaitMs} ms`],
+          ['round trip', `${r.ms.toFixed(1)} ms`],
+        ],
+        source: o.lockWaitMs === undefined ? 'client' : 'server',
+      });
+      return r;
+    } catch (err) {
+      if (err instanceof ApiError) {
+        if (err.notDeployed) setFeed({ checkout: 'unavailable' });
+        else setFeed({ checkout: 'live' });
+        record({
+          service: 'pg',
+          stamp: 'fail',
+          title: err.code === 'OUT_OF_STOCK' ? 'Rolled back, 409 out of stock' : err.notDeployed ? 'Checkout endpoint not deployed yet' : `Checkout failed, ${err.code}`,
+          fields: [...(label ? ([['buyer', label]] as [string, string][]) : []), ['status', String(err.status)], ['message', err.message]],
+          source: 'client',
+        });
+      }
+      throw err;
+    }
+  },
+  order: async (orderId: string) => (await call<{ order: Order }>(`/orders/${orderId}`)).data.order,
+
+  /** Fuzzy search via OpenSearch (phase 3). Throws ApiError.notDeployed until then. */
+  search: async (f: { q: string; category?: string; city?: string; minPrice?: number; maxPrice?: number }, signal?: AbortSignal) => {
+    try {
+      const r = await call<SearchResult>(`/search${query({ ...f, limit: 100 })}`, { service: 'os', quiet: true, signal });
+      setFeed({ search: 'live' });
+      const took = r.data.tookMs ?? r.data.took;
+      record({
+        service: 'os',
+        stamp: 'info',
+        title: `Search "${f.q}"`,
+        fields: [
+          ['hits', String(r.data.total)],
+          ['took', took === undefined ? 'not reported' : `${took} ms`],
+          ['round trip', `${r.ms.toFixed(1)} ms`],
+        ],
+        source: took === undefined ? 'client' : 'server',
+      });
+      return { ...r.data, roundTripMs: r.ms };
+    } catch (err) {
+      if (err instanceof ApiError && err.notDeployed) setFeed({ search: 'unavailable' });
+      throw err;
+    }
+  },
+};
+
+// --- Telemetry feed (phase 3) ----------------------------------------------
+
+function telemetryToLedger(ev: ServerTelemetryEvent) {
+  const service: Service = ev.service === 'kafka' ? 'kafka' : ev.service === 'opensearch' ? 'os' : 'pg';
+  const fields: [string, string][] = [];
+  if (ev.topic) fields.push(['topic', ev.topic]);
+  if (ev.partition !== undefined) fields.push(['partition', String(ev.partition)]);
+  if (ev.offset !== undefined) fields.push(['offset', String(ev.offset)]);
+  if (ev.lockWaitMs !== undefined) fields.push(['lock wait', `${ev.lockWaitMs} ms`]);
+  if (ev.latencyMs !== undefined) fields.push([service === 'os' ? 'sync latency' : 'latency', `${ev.latencyMs} ms`]);
+  if (ev.sku) fields.push(['sku', ev.sku]);
+  if (ev.stockBefore !== undefined && ev.stockAfter !== undefined) fields.push(['stock', `${ev.stockBefore} → ${ev.stockAfter}`]);
+  if (ev.orderId) fields.push(['order', short(ev.orderId)]);
+  record({
+    service,
+    stamp: /reject|fail|error/i.test(ev.type) ? 'fail' : /wait/i.test(ev.type) ? 'wait' : 'ok',
+    title: ev.message ?? ev.type,
+    fields,
+    source: 'server',
+    at: ev.at ? Date.parse(ev.at) || undefined : undefined,
+  });
+}
+
+/** Connects to SSE /api/telemetry/stream, falls back to polling /api/telemetry/events. */
+export function connectTelemetry(): () => void {
+  let stopped = false;
+  let es: EventSource | null = null;
+  let timer: number | undefined;
+  let cursor: string | undefined;
+
+  const handle = (raw: string) => {
+    try {
+      const parsed = JSON.parse(raw) as ServerTelemetryEvent | ServerTelemetryEvent[];
+      (Array.isArray(parsed) ? parsed : [parsed]).forEach(telemetryToLedger);
+    } catch {
+      /* ignore malformed frames */
+    }
+  };
+
+  const poll = async () => {
+    if (stopped) return;
+    try {
+      const res = await fetch(`${BASE}/api/telemetry/events${query({ after: cursor })}`);
+      if (res.status === 404) {
+        setFeed({ telemetry: 'unavailable' });
+        timer = window.setTimeout(start, 30_000);
+        return;
+      }
+      if (res.ok) {
+        setFeed({ telemetry: 'live' });
+        const body = (await res.json()) as { items?: (ServerTelemetryEvent & { id?: string })[]; next?: string };
+        (body.items ?? []).forEach(telemetryToLedger);
+        cursor = body.next ?? body.items?.[body.items.length - 1]?.id ?? cursor;
+      }
+    } catch {
+      setFeed({ telemetry: 'unavailable' });
+    }
+    timer = window.setTimeout(poll, 2_000);
+  };
+
+  const start = async () => {
+    if (stopped) return;
+    setFeed({ telemetry: 'connecting' });
+    const ctrl = new AbortController();
+    try {
+      const probe = await fetch(`${BASE}/api/telemetry/stream`, { signal: ctrl.signal, headers: { accept: 'text/event-stream' } });
+      const isStream = probe.ok && (probe.headers.get('content-type') ?? '').includes('text/event-stream');
+      ctrl.abort();
+      if (!isStream) return poll();
+      es = new EventSource(`${BASE}/api/telemetry/stream`);
+      es.onopen = () => setFeed({ telemetry: 'live' });
+      es.onmessage = (m) => handle(m.data as string);
+      es.onerror = () => setFeed({ telemetry: 'connecting' });
+    } catch {
+      setFeed({ telemetry: 'unavailable' });
+      timer = window.setTimeout(start, 30_000);
+    }
+  };
+
+  void start();
+  return () => {
+    stopped = true;
+    es?.close();
+    window.clearTimeout(timer);
+  };
+}
+
+// --- formatting --------------------------------------------------------------
+
+export const short = (id: string) => (id.length > 10 ? `${id.slice(0, 8)}…` : id);
+const inrFmt = new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', maximumFractionDigits: 0 });
+export const inr = (n: number) => inrFmt.format(n);
