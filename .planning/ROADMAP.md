@@ -53,8 +53,8 @@ Plans:
 
 Plans:
 
-- [ ] 02-01: Implement REST API routes for categories, products, cart sessions, and inventory lookup.
-- [ ] 02-02: Implement atomic checkout endpoint with row-level pessimistic locking (`SELECT ... FOR UPDATE`) and create automated concurrency test suite.
+- [ ] 02-01-PLAN.md (wave 1): Fastify `/api` routes for categories, products (category/location/city/in-stock filters), store locations, inventory lookup, and cart sessions locked on the cart row. Includes zod validation, one error envelope, offline route tests, and a live `test:api` smoke run.
+- [ ] 02-02-PLAN.md (wave 2): Atomic checkout that locks inventory with `... ORDER BY id FOR UPDATE`. Returns 409 OUT_OF_STOCK, gives idempotent cart replay, and calls a post-commit OrderEventSink hook (where Phase 3 will add Kafka). Includes a live `npm run test:race` with last-unit, multi-item deadlock, and double-submit scenarios.
 
 ---
 
