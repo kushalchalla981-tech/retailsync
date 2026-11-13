@@ -343,8 +343,8 @@ function LaneRow({ lane, span, now }: { lane: Lane; span: number; now: number })
       <span className="w-14 shrink-0 text-sm font-semibold">Buyer {lane.id}</span>
       <div className="relative h-8 flex-1 border-y border-rule bg-paper">
         <div
-          className={`absolute inset-y-1 ${lane.state === 'inflight' ? 'lock-pulse' : ''}`}
-          style={{ left: `${left}%`, width: `${width}%`, background: color }}
+          className={`absolute inset-y-1 left-0 w-full origin-left ${lane.state === 'inflight' ? 'lock-pulse' : ''}`}
+          style={{ transform: `translateX(${left}%) scaleX(${width / 100})`, background: color }}
         />
         <span className="figures absolute inset-y-0 right-2 flex items-center bg-paper px-1.5 text-xs font-semibold" style={{ color: lane.state === 'preparing' ? 'var(--color-muted)' : color }}>
           <span className="bg-paper px-1">

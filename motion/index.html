@@ -1,0 +1,102 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=1080, height=1080" />
+    <script src="https://cdn.jsdelivr.net/npm/gsap@3.15.0/dist/gsap.min.js"></script>
+    <style>
+      @font-face { font-family: "Six Caps"; src: url("assets/fonts/SixCaps.ttf"); }
+      @font-face { font-family: "Bevan"; src: url("assets/fonts/Bevan.ttf"); }
+      @font-face { font-family: "Archivo Narrow"; src: url("assets/fonts/ArchivoNarrow.ttf"); font-weight: 400 700; }
+      :root {
+        --paper: oklch(92% 0.028 88);
+        --paper-2: oklch(88.5% 0.032 88);
+        --ink: oklch(18% 0.01 50);
+        --muted: oklch(43% 0.02 62);
+        --rule: oklch(75% 0.028 82);
+        --accent: oklch(53% 0.19 33);
+        --font-display: "Six Caps", sans-serif;
+        --font-slab: "Bevan", serif;
+        --font-body: "Archivo Narrow", sans-serif;
+      }
+      * { margin: 0; padding: 0; box-sizing: border-box; }
+      html, body { width: 1080px; height: 1080px; overflow: hidden; background: var(--paper); }
+      #root { position: relative; width: 100%; height: 100%; }
+      #sheet { position: absolute; inset: 0; padding: 72px 80px; color: var(--ink); font-family: var(--font-body); }
+      .head { display: flex; justify-content: space-between; align-items: baseline; }
+      .slab { font-family: var(--font-slab); text-transform: uppercase; line-height: 1; }
+      .muted { color: var(--muted); }
+      .display { font-family: var(--font-display); text-transform: uppercase; line-height: 0.88; letter-spacing: 0.02em; white-space: nowrap; }
+      #bar { height: 5px; background: var(--ink); margin-top: 20px; transform-origin: left center; }
+      #lot { margin-top: 22px; font-size: 128px; }
+      #item { margin-top: 10px; font-size: 30px; font-weight: 600; }
+      .rows { margin-top: 28px; }
+      .row { display: grid; grid-template-columns: 210px 1fr 200px; align-items: baseline; gap: 24px; padding: 16px 0; border-top: 1px solid var(--rule); }
+      .row .svc { font-size: 30px; font-weight: 700; }
+      .row .what { font-size: 28px; }
+      .row .val { font-size: 64px; text-align: right; }
+      .mask { overflow: hidden; padding-bottom: 20px; }
+      .mask .display { line-height: 1; }
+      #stock { display: flex; justify-content: flex-end; gap: 14px; align-items: baseline; }
+      #s0 { color: var(--accent); }
+      #soldbox { position: absolute; left: 80px; right: 80px; bottom: 36px; }
+      #sold { font-size: 168px; color: var(--accent); }
+    </style>
+  </head>
+  <body>
+    <div id="root" data-composition-id="main" data-start="0" data-duration="10" data-width="1080" data-height="1080">
+      <div id="sheet" class="clip" data-start="0" data-duration="10" data-track-index="0" data-track-kind="graphics">
+      <div id="hd" class="head">
+        <p class="slab" style="font-size: 40px">RetailSync</p>
+        <p class="muted" style="font-size: 26px">Bangalore Central</p>
+      </div>
+      <div id="bar" class=""></div>
+
+      <div class="mask" id="lotbox">
+        <p id="lot" class="display">Last unit, order 4761aa7b</p>
+      </div>
+      <p id="item" class="">Sony PlayStation 5 Slim, ₹54,990</p>
+
+      <div class="rows">
+        <div id="r1" class="row">
+          <span class="svc">PostgreSQL</span><span class="what">Row locked, order committed</span>
+          <span id="stock" class="val display"><span id="s1">1</span><span id="s0">0</span></span>
+        </div>
+        <div id="r2" class="row">
+          <span class="svc">Kafka</span><span class="what">orders.placed published</span><span class="val display">Offset 3</span>
+        </div>
+        <div id="r3" class="row">
+          <span class="svc">Consumer</span><span class="what">inventory.updated, stock 0</span><span class="val display">Heard</span>
+        </div>
+        <div id="r4" class="row">
+          <span class="svc">OpenSearch</span><span class="what">Search index synced</span><span class="val display">1,858 ms</span>
+        </div>
+      </div>
+
+      <div class="mask" id="soldbox">
+        <p id="sold" class="display">Sold once.</p>
+      </div>
+      </div>
+    </div>
+    <script>
+      const tl = gsap.timeline({ paused: true, defaults: { ease: "power3.out" } });
+      // Opening: the bill's head rule draws, the lot line rises out of its mask.
+      tl.fromTo("#bar", { scaleX: 0 }, { scaleX: 1, duration: 0.7, ease: "power4.out" }, 0.1);
+      tl.fromTo("#hd", { opacity: 0 }, { opacity: 1, duration: 0.4 }, 0.1);
+      tl.fromTo("#lot", { yPercent: 105 }, { yPercent: 0, duration: 0.7, ease: "power4.out" }, 0.35);
+      tl.fromTo("#item", { opacity: 0, y: 16 }, { opacity: 1, y: 0, duration: 0.5 }, 0.8);
+      // Each service prints as a row, half a second apart, the way the ledger fills.
+      ["#r1", "#r2", "#r3", "#r4"].forEach((id, i) => {
+        tl.fromTo(id, { opacity: 0, y: 24 }, { opacity: 1, y: 0, duration: 0.45 }, 1.6 + i * 1.15);
+      });
+      // Stock flips 1 -> 0 as the commit lands.
+      tl.fromTo("#s1", { opacity: 1 }, { opacity: 0.25, duration: 0.3 }, 2.3);
+      tl.fromTo("#s0", { opacity: 0, y: -30 }, { opacity: 1, y: 0, duration: 0.35, ease: "back.out(2)" }, 2.35);
+      // Close: the verdict, then hold.
+      tl.fromTo("#sold", { yPercent: 105 }, { yPercent: 0, duration: 0.8, ease: "power4.out" }, 6.6);
+      tl.to({}, { duration: 0.01 }, 9.99);
+      window.__timelines["main"] = tl;
+      tl.seek(0);
+    </script>
+  </body>
+</html>

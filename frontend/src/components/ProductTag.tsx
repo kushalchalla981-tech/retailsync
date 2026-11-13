@@ -29,7 +29,9 @@ export function ProductTag({ product, store, inCart, busy, onAdd }: Props) {
       <div className="mt-auto flex items-end justify-between gap-3 pt-3">
         <div>
           <p className="display text-[2.5rem] leading-[0.9]">{inr(product.price)}</p>
-          <p className={`mt-1 text-sm ${out || stock === 1 ? 'font-semibold text-fail' : 'text-ink-2'}`}>{stockText}</p>
+          <p className={`mt-1 overflow-hidden text-sm ${out || stock === 1 ? 'font-semibold text-fail' : 'text-ink-2'}`}>
+            <span key={stockText} className="tick-in block">{stockText}</span>
+          </p>
         </div>
         <button type="button" onClick={() => onAdd(product)} disabled={busy || !store || left <= 0} aria-label={`Add ${product.name} to cart`} className="btn btn--frame shrink-0">
           <Plus className="h-4 w-4" aria-hidden="true" />

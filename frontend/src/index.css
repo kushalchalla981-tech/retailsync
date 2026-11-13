@@ -172,7 +172,32 @@ h3,
   animation: lock-contention 0.9s ease-in-out infinite;
 }
 
+/* A ledger line prints: it drops into place from under the line above. */
+@keyframes line-in {
+  from {
+    opacity: 0;
+    transform: translateY(-8px);
+  }
+}
+.line-in {
+  animation: line-in var(--dur-short) var(--ease-out);
+}
+/* A stock figure rolls when PostgreSQL reports a new count. */
+@keyframes tick-in {
+  from {
+    opacity: 0;
+    transform: translateY(70%);
+  }
+}
+.tick-in {
+  animation: tick-in var(--dur-short) var(--ease-out);
+}
+
 @media (prefers-reduced-motion: reduce) {
+  .line-in,
+  .tick-in {
+    animation: none;
+  }
   .lock-pulse {
     animation: none;
   }

@@ -24,7 +24,7 @@ const clock = (t: number) => {
 function Line({ e }: { e: LedgerEntry }) {
   const label = STAMP[e.stamp];
   return (
-    <li className="border-t border-band-rule px-5 py-3">
+    <li className="line-in border-t border-band-rule px-5 py-3">
       <div className="flex items-baseline gap-3">
         <span className="figures w-8 shrink-0 text-xs font-semibold text-band-muted">{SERVICE[e.service].code}</span>
         <span className="min-w-0 flex-1 text-[0.9375rem] font-semibold leading-snug">{e.title}</span>

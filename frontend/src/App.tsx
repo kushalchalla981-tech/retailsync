@@ -222,14 +222,14 @@ export default function App() {
         </header>
 
         <section className="mx-auto max-w-[1200px] px-4 pt-8 sm:px-8" aria-labelledby="shelf-title">
-          <div className="grid items-end gap-x-10 gap-y-6 md:grid-cols-[minmax(0,7fr)_minmax(0,5fr)]">
-            <h1 id="shelf-title" className="min-w-0">
-              <FitLine>Live stock from</FitLine>
-              <FitLine>three stores.</FitLine>
-              <FitLine className="text-accent">No sale promised twice.</FitLine>
-            </h1>
-            <div className="min-w-0 border-t-[5px] border-ink pt-4">
-              <p className="text-[1.0625rem] leading-snug">
+          <div className="grid items-center gap-x-10 gap-y-8 md:grid-cols-[minmax(0,7fr)_minmax(0,5fr)]">
+            <div className="min-w-0">
+              <h1 id="shelf-title" className="min-w-0">
+                <FitLine>Live stock from</FitLine>
+                <FitLine>three stores.</FitLine>
+                <FitLine className="text-accent">No sale promised twice.</FitLine>
+              </h1>
+              <p className="mt-5 max-w-[46ch] text-[1.0625rem] leading-snug">
                 Every checkout locks its stock row in PostgreSQL, then tells Kafka and the search index.
               </p>
               <div className="mt-5 flex flex-wrap gap-3">
@@ -238,6 +238,7 @@ export default function App() {
                 </button>
               </div>
             </div>
+            <OrderFilm />
           </div>
 
           <div className="mt-10 border-t-[5px] border-ink pt-5">
@@ -343,6 +344,29 @@ export default function App() {
       />
       <RaceDialog open={raceOpen} onClose={() => setRaceOpen(false)} locations={locations} onFinished={() => setReload((n) => n + 1)} />
     </div>
+  );
+}
+
+/** The HyperFrames film of one real order (motion/), muted and looping; a still under reduced motion. */
+function OrderFilm() {
+  const [still, setStill] = useState(() => typeof window !== 'undefined' && window.matchMedia('(prefers-reduced-motion: reduce)').matches);
+  useEffect(() => {
+    const mq = window.matchMedia('(prefers-reduced-motion: reduce)');
+    const on = () => setStill(mq.matches);
+    mq.addEventListener('change', on);
+    return () => mq.removeEventListener('change', on);
+  }, []);
+  return (
+    <figure className="min-w-0">
+      <div className="frame p-1">
+        {still ? (
+          <img src="/order-film.jpg" alt="One order's path: row locked in PostgreSQL, published to Kafka, synced to OpenSearch, sold once." className="aspect-square w-full" />
+        ) : (
+          <video src="/order-film.mp4" poster="/order-film.jpg" autoPlay muted loop playsInline className="aspect-square w-full" aria-label="One order's path: row locked in PostgreSQL, published to Kafka, synced to OpenSearch, sold once." />
+        )}
+      </div>
+      <figcaption className="mt-2 text-sm text-ink-2">A real order from the live system, replayed.</figcaption>
+    </figure>
   );
 }
 
