@@ -66,7 +66,7 @@ export function CartDrawer({ open, onClose, cart, busy, onQuantity, onRemove, on
   return (
     <Dialog open={open} onClose={close} labelledBy="cart-title" placement="right">
       <header className="flex items-center justify-between px-6 pb-3 pt-6">
-        <h2 id="cart-title" className="text-xl font-extrabold tracking-tight">
+        <h2 id="cart-title" className="text-2xl">
           {step === 'placed' ? 'Order receipt' : step === 'cart' ? 'Your cart' : 'Checkout'}
         </h2>
         <button type="button" onClick={close} aria-label="Close cart" className="-mr-2 p-2 text-ink-2 hover:text-ink">
@@ -74,14 +74,14 @@ export function CartDrawer({ open, onClose, cart, busy, onQuantity, onRemove, on
         </button>
       </header>
       <p className="figures px-6 text-[0.6875rem] text-ink-2">
-        {cart?.location ? `Pickup store · ${cart.location.name}, ${cart.location.city}` : 'No store selected'}
+        {cart?.location ? `Pickup at ${cart.location.name}, ${cart.location.city}` : 'No store selected'}
       </p>
-      <div className="perf mx-6 mt-3" />
+      <div className="border-t border-rule mx-6 mt-3" />
 
       <div className="min-h-0 flex-1 overflow-y-auto px-6 py-4">
         {step === 'placed' && order ? (
           <div className="figures text-[0.75rem]">
-            <span className="stamp text-[0.8125rem]" style={{ color: 'var(--ok)' }}>
+            <span className="verdict">
               {replayed ? 'Replayed' : 'Committed'}
             </span>
             <dl className="mt-5 space-y-1.5">
@@ -90,7 +90,7 @@ export function CartDrawer({ open, onClose, cart, busy, onQuantity, onRemove, on
               <Row k="customer" v={order.customer.name} />
               <Row k="placed" v={new Date(order.createdAt).toLocaleString('en-IN')} />
             </dl>
-            <div className="perf my-4" />
+            <div className="border-t border-rule my-4" />
             <ul className="space-y-1.5">
               {order.items.map((i) => (
                 <li key={i.productId} className="flex justify-between gap-3">
@@ -101,7 +101,7 @@ export function CartDrawer({ open, onClose, cart, busy, onQuantity, onRemove, on
                 </li>
               ))}
             </ul>
-            <div className="perf my-4" />
+            <div className="border-t border-rule my-4" />
             <Row k="total" v={inr(order.totalAmount)} strong />
             <p className="mt-6 font-sans text-sm text-ink-2">The stock decrement and this order committed in one PostgreSQL transaction. The ledger shows the line.</p>
           </div>
@@ -117,7 +117,7 @@ export function CartDrawer({ open, onClose, cart, busy, onQuantity, onRemove, on
                 <div className="min-w-0 flex-1">
                   <p className="truncate text-sm font-semibold">{i.name}</p>
                   <p className="figures text-[0.6875rem] text-ink-2">
-                    {inr(i.unitPrice)} · {i.availableQuantity} at this store
+                    {inr(i.unitPrice)} each, {i.availableQuantity} in this store
                   </p>
                   {step === 'cart' && (
                     <div className="mt-2 flex items-center gap-1">
@@ -145,7 +145,7 @@ export function CartDrawer({ open, onClose, cart, busy, onQuantity, onRemove, on
 
         {(step === 'details' || step === 'placing') && (
           <form id="checkout-form" onSubmit={submit} className="mt-4 space-y-3">
-            <div className="perf mb-4" />
+            <div className="border-t border-rule mb-4" />
             <Field id="co-name" label="Name" value={name} onChange={setName} autoComplete="name" />
             <Field id="co-email" label="Email" type="email" value={email} onChange={setEmail} autoComplete="email" />
             {error && (
@@ -170,7 +170,7 @@ export function CartDrawer({ open, onClose, cart, busy, onQuantity, onRemove, on
             <span>{inr(cart?.subtotal ?? 0)}</span>
           </div>
           {step === 'cart' ? (
-            <button type="button" onClick={() => setStep('details')} className="w-full bg-ink py-3 text-sm font-semibold text-sheet hover:bg-[#33312c]">
+            <button type="button" onClick={() => setStep('details')} className="w-full btn ">
               Check out
             </button>
           ) : (
@@ -178,7 +178,7 @@ export function CartDrawer({ open, onClose, cart, busy, onQuantity, onRemove, on
               <button type="button" onClick={() => setStep('cart')} disabled={step === 'placing'} className="border border-ink px-4 py-3 text-sm font-semibold hover:bg-paper">
                 Back
               </button>
-              <button type="submit" form="checkout-form" disabled={step === 'placing'} className="flex-1 bg-ink py-3 text-sm font-semibold text-sheet hover:bg-[#33312c] disabled:opacity-60">
+              <button type="submit" form="checkout-form" disabled={step === 'placing'} className="flex-1 btn  disabled:opacity-60">
                 {step === 'placing' ? 'Locking stock…' : 'Place order'}
               </button>
             </div>

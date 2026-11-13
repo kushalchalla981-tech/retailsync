@@ -55,7 +55,7 @@ export function Dialog({ open, onClose, labelledBy, placement, className = '', c
   if (!open) return null;
   return (
     <div className="fixed inset-0 z-50 flex">
-      <div className="absolute inset-0 bg-[#1e1d1a]/55" onClick={onClose} aria-hidden="true" />
+      <div className="absolute inset-0 bg-scrim" onClick={onClose} aria-hidden="true" />
       <div
         ref={panel}
         role="dialog"
@@ -64,8 +64,8 @@ export function Dialog({ open, onClose, labelledBy, placement, className = '', c
         tabIndex={-1}
         className={
           placement === 'right'
-            ? `relative ml-auto flex h-full w-full max-w-md flex-col bg-sheet shadow-[0_10px_40px_rgba(0,0,0,0.35)] ${className}`
-            : `relative m-auto flex max-h-[92vh] w-[calc(100%-2rem)] flex-col overflow-hidden bg-sheet shadow-[0_18px_60px_rgba(0,0,0,0.4)] ${className}`
+            ? `relative ml-auto flex h-full w-full max-w-md flex-col border-l-[5px] border-ink bg-paper ${className}`
+            : `relative m-auto flex max-h-[92vh] w-[calc(100%-2rem)] flex-col overflow-hidden frame bg-paper ${className}`
         }
       >
         {children}

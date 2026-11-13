@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { RotateCcw, X } from 'lucide-react';
+import { FitLine } from './FitLine';
 import { Dialog } from './Dialog';
 import { api, ApiError, short } from '../services/api';
 import { useLedger } from '../services/ledger';
@@ -178,11 +179,11 @@ export function RaceDialog({ open, onClose, locations, onFinished }: Props) {
   return (
     <Dialog open={open} onClose={onClose} labelledBy="race-title" placement="center" className="max-w-4xl">
       <header className="flex items-start justify-between gap-4 px-6 pb-4 pt-6">
-        <div>
-          <h2 id="race-title" className="text-2xl font-extrabold tracking-tight">
-            The last-unit race
+        <div className="min-w-0 flex-1">
+          <h2 id="race-title" className="display max-w-none">
+            <FitLine max={120}>One unit, {buyers} buyers</FitLine>
           </h2>
-          <p className="mt-1 max-w-[62ch] text-sm text-ink-2">
+          <p className="mt-3 max-w-[62ch] text-[0.9375rem] text-ink-2">
             {buyers} real carts check out {product ? product.name : TARGET_SKU} at {TARGET_STORE} at the same instant. PostgreSQL locks the inventory row, so
             one buyer commits and the rest are turned away.
           </p>
@@ -191,10 +192,10 @@ export function RaceDialog({ open, onClose, locations, onFinished }: Props) {
           <X className="h-5 w-5" aria-hidden="true" />
         </button>
       </header>
-      <div className="perf mx-6" />
+      <div className="mx-6 border-t-[5px] border-ink" />
 
       <div className="min-h-0 flex-1 overflow-y-auto px-6 py-5">
-        <div className="figures mb-5 grid grid-cols-2 gap-x-6 gap-y-2 text-[0.75rem] sm:grid-cols-4">
+        <div className="mb-5 grid grid-cols-2 gap-x-6 gap-y-3 sm:grid-cols-4">
           <Fact k="sku" v={product?.sku ?? TARGET_SKU} />
           <Fact k="stock before" v={stockBefore === undefined ? '…' : String(stockBefore)} />
           <Fact k="stock after" v={stockAfter === undefined ? '…' : String(stockAfter)} />
@@ -208,13 +209,12 @@ export function RaceDialog({ open, onClose, locations, onFinished }: Props) {
           </p>
         )}
         {phase === 'unavailable' && (
-          <p role="status" className="border border-wait px-4 py-3 text-sm text-ink">
-            Checkout is not available yet: the server answered 404 for <span className="figures">POST /api/carts/:id/checkout</span>. The race runs as soon as
-            plan 02-02 ships.
+          <p role="status" className="border border-ink px-4 py-3 text-sm text-ink">
+            Checkout is unreachable: the server answered 404 for <span className="figures">POST /api/carts/:id/checkout</span>.
           </p>
         )}
         {phase === 'ready' && stockBefore === 0 && (
-          <p role="status" className="border border-wait px-4 py-3 text-sm text-ink">
+          <p role="status" className="border border-ink px-4 py-3 text-sm text-ink">
             Stock is already 0 at {TARGET_STORE}, so every lane will be rejected. Reseed the catalog to restore the last unit, or run it anyway to watch the
             lock turn everyone away.
           </p>
@@ -229,7 +229,7 @@ export function RaceDialog({ open, onClose, locations, onFinished }: Props) {
         )}
 
         {lanes.length > 0 && (
-          <div className="figures mt-2 flex justify-between pl-14 text-[0.625rem] text-ink-2" aria-hidden="true">
+          <div className="figures mt-2 flex justify-between pl-14 text-xs text-ink-2" aria-hidden="true">
             <span>0 ms</span>
             <span>{(span / 2).toFixed(0)} ms</span>
             <span>{span.toFixed(0)} ms</span>
@@ -239,11 +239,11 @@ export function RaceDialog({ open, onClose, locations, onFinished }: Props) {
         {phase === 'done' && (
           <div className="mt-6 grid gap-6 md:grid-cols-2">
             <section aria-labelledby="race-verdict">
-              <h3 id="race-verdict" className="text-base font-bold">
+              <h3 id="race-verdict" className="text-xl">
                 {committed <= Math.max(stockBefore ?? 0, 0) && (stockAfter ?? 0) >= 0 ? 'No oversell' : 'Integrity check failed'}
               </h3>
               <p className="figures mt-2 text-[0.75rem] leading-relaxed text-ink-2">
-                {committed} committed · {rejected} rejected 409 · stock {stockBefore} → {stockAfter}
+                {committed} committed, {rejected} rejected with 409, stock {stockBefore} to {stockAfter}
               </p>
               <h4 className="mt-4 text-sm font-semibold">Downstream</h4>
               {downstream.length === 0 ? (
@@ -253,8 +253,8 @@ export function RaceDialog({ open, onClose, locations, onFinished }: Props) {
               ) : (
                 <ul className="figures mt-1 space-y-1 text-[0.75rem]">
                   {downstream.slice(0, 6).map((e) => (
-                    <li key={e.seq} style={{ color: e.service === 'kafka' ? 'var(--kafka)' : 'var(--os)' }}>
-                      {e.title} {e.fields.map(([k, v]) => `${k} ${v}`).join(' · ')}
+                    <li key={e.seq} className="border-t border-rule py-1.5">
+                      <span className="font-semibold">{e.title}</span> <span className="text-ink-2">{e.fields.map(([k, v]) => `${k} ${v}`).join(', ')}</span>
                     </li>
                   ))}
                 </ul>
@@ -262,17 +262,17 @@ export function RaceDialog({ open, onClose, locations, onFinished }: Props) {
             </section>
             <section aria-labelledby="race-counterfactual" className="border border-dashed border-ink-2 p-4">
               <div className="flex items-baseline justify-between gap-3">
-                <h3 id="race-counterfactual" className="text-base font-bold">
+                <h3 id="race-counterfactual" className="text-xl">
                   Without a lock
                 </h3>
-                <span className="stamp" style={{ color: 'var(--ink-2)' }}>
+                <span className="verdict text-ink-2">
                   Simulated
                 </span>
               </div>
               <p className="mt-2 text-sm text-ink-2">
                 Arithmetic, not a request: if all {buyers} buyers read stock {stockBefore} before anyone wrote, each would decrement it.
               </p>
-              <p className="figures mt-3 text-2xl font-bold" style={{ color: 'var(--fail)' }}>
+              <p className="display mt-3 text-[3.5rem] text-accent">
                 {oversold === undefined ? '…' : `${stockBefore} → ${oversold}`}
               </p>
               {oversold !== undefined && oversold < 0 && <p className="text-sm text-ink-2">Oversold by {-oversold} units.</p>}
@@ -303,7 +303,7 @@ export function RaceDialog({ open, onClose, locations, onFinished }: Props) {
           data-autofocus
           disabled={!product || phase === 'running' || phase === 'resolving'}
           onClick={() => product && run(product, buyers)}
-          className="ml-auto flex items-center gap-2 bg-ink px-4 py-2 text-sm font-semibold text-sheet hover:bg-[#33312c] disabled:opacity-50"
+          className="ml-auto flex items-center gap-2 btn  disabled:opacity-50"
         >
           <RotateCcw className="h-4 w-4" aria-hidden="true" />
           {phase === 'running' ? 'Racing…' : lanes.length ? 'Replay race' : 'Run race'}
@@ -315,9 +315,9 @@ export function RaceDialog({ open, onClose, locations, onFinished }: Props) {
 
 function Fact({ k, v }: { k: string; v: string }) {
   return (
-    <div>
-      <div className="text-ink-2">{k}</div>
-      <div className="text-base font-semibold text-ink">{v}</div>
+    <div className="border-t border-ink pt-1.5">
+      <div className="text-sm text-ink-2">{k.charAt(0).toUpperCase() + k.slice(1)}</div>
+      <div className="display mt-1 text-[2.75rem] text-ink">{v}</div>
     </div>
   );
 }
@@ -327,30 +327,30 @@ function LaneRow({ lane, span, now }: { lane: Lane; span: number; now: number })
   const width = Math.max(((end - lane.start) / span) * 100, lane.state === 'preparing' ? 0 : 1.5);
   const left = (lane.start / span) * 100;
   const color =
-    lane.state === 'committed' ? 'var(--ok)' : lane.state === 'rejected' || lane.state === 'error' ? 'var(--fail)' : lane.state === 'inflight' ? 'var(--wait)' : 'var(--rule)';
+    lane.state === 'committed' ? 'var(--color-ink)' : lane.state === 'rejected' || lane.state === 'error' ? 'var(--color-accent)' : lane.state === 'inflight' ? 'var(--color-muted)' : 'var(--color-rule)';
   const label =
     lane.state === 'preparing'
       ? 'Preparing cart'
       : lane.state === 'inflight'
         ? 'Waiting on lock'
         : lane.state === 'committed'
-          ? `Committed ${lane.status} · order ${short(lane.orderId ?? '')}`
+          ? `Committed ${lane.status}, order ${short(lane.orderId ?? '')}`
           : lane.state === 'rejected'
             ? `Rejected ${lane.status} ${lane.code}`
             : `Error ${lane.status ?? ''} ${lane.code ?? ''}`;
   return (
     <li className="flex items-center gap-3">
-      <span className="figures w-11 shrink-0 text-[0.75rem] font-bold">Lane {lane.id}</span>
+      <span className="w-14 shrink-0 text-sm font-semibold">Buyer {lane.id}</span>
       <div className="relative h-8 flex-1 border-y border-rule bg-paper">
         <div
           className={`absolute inset-y-1 ${lane.state === 'inflight' ? 'lock-pulse' : ''}`}
           style={{ left: `${left}%`, width: `${width}%`, background: color }}
         />
-        <span className="figures absolute inset-y-0 right-2 flex items-center text-[0.625rem] font-semibold" style={{ color: lane.state === 'preparing' ? 'var(--ink-2)' : color }}>
+        <span className="figures absolute inset-y-0 right-2 flex items-center bg-paper px-1.5 text-xs font-semibold" style={{ color: lane.state === 'preparing' ? 'var(--color-muted)' : color }}>
           <span className="bg-paper px-1">
             {label}
-            {lane.end !== undefined && ` · ${(lane.end - lane.start).toFixed(0)} ms`}
-            {lane.lockWaitMs !== undefined && ` · lock ${lane.lockWaitMs} ms`}
+            {lane.end !== undefined && `, ${(lane.end - lane.start).toFixed(0)} ms`}
+            {lane.lockWaitMs !== undefined && `, lock ${lane.lockWaitMs} ms`}
           </span>
         </span>
       </div>

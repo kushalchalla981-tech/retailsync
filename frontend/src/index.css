@@ -1,124 +1,164 @@
+/* Hallmark · shape: app screen · genre: editorial · theme: Broadside (deal 2/3, seed online-store-retail-chain-e917·e4c80d52·2026-11-13·r0) · redesign: full
+ * nav: top bar, wordmark + store + race + cart · signature: the last-unit race set as a sale bill, one lot and five bidders on a millisecond rule · states: loading, empty, error, full · broadside: bill
+ * axes: light/display-condensed/warm · posture: committed · contrast: pass · v2.0.0 */
+/* Hallmark · pre-emit critique: P3 H3 E3 S4 R3 V3 · weakest: H, the shop grid is still a grid of tags; set as a printed price list with hair rules so it reads as the bill's particulars */
+@import url("./tokens.css");
+@import url("./base.css");
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
 :root {
-  /* Thermal paper and the carbon desk it sits on */
-  --paper: #efebe1;
-  --sheet: #fbf9f3;
-  --desk: #1e1d1a;
-  --desk-2: #2a2925;
-  --ink: #1c1b18;
-  --ink-2: #57534a; /* 7.0:1 on --paper */
-  --rule: #cbc5b6;
-  --desk-ink: #ece8dd;
-  --desk-ink-2: #aaa596; /* 7.4:1 on --desk */
-
-  /* One ink per managed service, used everywhere that service appears */
-  --pg: #1f4e8c;
-  --kafka: #9a3b12;
-  --os: #0b6b5e;
-
-  /* Stamp inks */
-  --ok: #1b6e37;
-  --wait: #8a5a00;
-  --fail: #a8231b;
-
+  /* Ledger band: ink stock with buff type (Broadside's ink band). */
+  --color-band: var(--color-ink);
+  --color-band-ink: var(--color-paper);
+  --color-band-muted: oklch(78% 0.03 82);
+  --color-band-rule: oklch(36% 0.012 50);
+  --color-scrim: oklch(18% 0.01 50 / 0.55);
   color-scheme: light;
 }
 
-html {
-  background: var(--paper);
-}
-
 body {
-  background: var(--paper);
-  color: var(--ink);
-  font-family: 'Schibsted Grotesk', system-ui, sans-serif;
-  font-feature-settings: 'ss01';
-  -webkit-font-smoothing: antialiased;
-}
-
-::selection {
-  background: var(--ink);
-  color: var(--sheet);
-}
-
-:focus-visible {
-  outline: 2px solid var(--ink);
-  outline-offset: 2px;
-}
-.on-desk :focus-visible {
-  outline-color: var(--desk-ink);
-}
-
-input,
-select {
-  caret-color: var(--pg);
-}
-
-* {
-  scrollbar-width: thin;
-  scrollbar-color: var(--rule) transparent;
-}
-.on-desk * {
-  scrollbar-color: #4a4841 transparent;
-}
-
-.figures {
-  font-family: 'Martian Mono', ui-monospace, monospace;
-  font-variant-numeric: tabular-nums slashed-zero;
-  letter-spacing: -0.02em;
+  font-family: var(--font-body);
 }
 
 h1,
+.display {
+  font-family: var(--font-display);
+  font-weight: 400;
+  text-transform: uppercase;
+  line-height: 1;
+  letter-spacing: var(--tracking-display);
+  max-width: none;
+}
+/* Fitted lines never wrap, so they may set solid. */
+.display,
+.fit {
+  white-space: nowrap;
+  line-height: 0.88;
+}
 h2,
-h3 {
-  text-wrap: balance;
+h3,
+.wordmark {
+  font-family: var(--font-display-2);
+  font-weight: 400;
+  text-transform: uppercase;
+  line-height: 1;
+  letter-spacing: 0;
+}
+.fit {
+  display: block;
 }
 
-@layer components {
-  /* Perforation: a dashed tear line, the receipt's section break */
-  .perf {
-    height: 1px;
-    background-image: linear-gradient(to right, var(--rule) 55%, transparent 55%);
-    background-size: 8px 1px;
-  }
-  .perf-desk {
-    height: 1px;
-    background-image: linear-gradient(to right, #4a4841 55%, transparent 55%);
-    background-size: 8px 1px;
-  }
-  /* Torn receipt edge (top and bottom), drawn with a mask */
-  .torn {
-    --t: 6px;
-    -webkit-mask:
-      conic-gradient(from -45deg at bottom, #0000, #000 1deg 89deg, #0000 90deg) bottom / calc(2 * var(--t)) var(--t) repeat-x,
-      conic-gradient(from 135deg at top, #0000, #000 1deg 89deg, #0000 90deg) top / calc(2 * var(--t)) var(--t) repeat-x,
-      linear-gradient(#000 0 0) center / 100% calc(100% - 2 * var(--t) + 1px) no-repeat;
-    mask:
-      conic-gradient(from -45deg at bottom, #0000, #000 1deg 89deg, #0000 90deg) bottom / calc(2 * var(--t)) var(--t) repeat-x,
-      conic-gradient(from 135deg at top, #0000, #000 1deg 89deg, #0000 90deg) top / calc(2 * var(--t)) var(--t) repeat-x,
-      linear-gradient(#000 0 0) center / 100% calc(100% - 2 * var(--t) + 1px) no-repeat;
-  }
-  /* Rubber stamp: double rule, uppercase mono, slight tilt */
-  .stamp {
-    display: inline-block;
-    font-family: 'Martian Mono', ui-monospace, monospace;
-    font-size: 0.625rem;
-    font-weight: 700;
-    letter-spacing: 0.08em;
-    text-transform: uppercase;
-    line-height: 1;
-    padding: 0.3rem 0.4rem 0.25rem;
-    border: 1.5px solid currentColor;
-    box-shadow: inset 0 0 0 1.5px var(--sheet), inset 0 0 0 2.5px currentColor;
-    transform: rotate(-1.5deg);
-    white-space: nowrap;
-  }
+/* Figures: the narrow face in tabular numerals (Broadside keeps three faces). */
+.figures {
+  font-family: var(--font-body);
+  font-variant-numeric: tabular-nums;
 }
 
-/* The single pulse: reserved for a buyer blocked on a row lock */
+.rule-bar {
+  border-top: var(--rule-bar) solid var(--color-ink);
+}
+.rule-hair {
+  border-top: var(--rule-hair) solid var(--color-rule);
+}
+.on-band .rule-hair {
+  border-top-color: var(--color-band-rule);
+}
+.frame {
+  border: var(--rule-frame) solid var(--color-ink);
+  box-shadow:
+    inset 0 0 0 3px var(--color-paper),
+    inset 0 0 0 4px var(--color-ink);
+}
+
+/* Controls: the ink block and the framed block, eight states. */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-xs);
+  min-height: 44px;
+  padding: 0 var(--space-md);
+  border: 3px solid var(--color-ink);
+  background: var(--color-ink);
+  color: var(--color-paper);
+  font: 600 var(--text-sm) / 1 var(--font-body);
+  text-transform: uppercase;
+  cursor: pointer;
+  transition:
+    background-color var(--dur-micro) var(--ease-out),
+    color var(--dur-micro) var(--ease-out);
+}
+.btn:hover {
+  background: var(--color-ink-2);
+  border-color: var(--color-ink-2);
+}
+.btn:active {
+  background: var(--color-accent);
+  border-color: var(--color-accent);
+}
+.btn--frame {
+  background: transparent;
+  color: var(--color-ink);
+  box-shadow:
+    inset 0 0 0 3px var(--color-paper),
+    inset 0 0 0 4px var(--color-ink);
+}
+.btn--frame:hover {
+  background: var(--color-paper-2);
+  border-color: var(--color-ink);
+}
+.btn--frame:active {
+  background: var(--color-paper-3);
+  border-color: var(--color-ink);
+}
+.btn:disabled,
+.btn[aria-disabled='true'] {
+  cursor: not-allowed;
+  background: transparent;
+  color: var(--color-muted);
+  border-color: var(--color-rule);
+  box-shadow: none;
+}
+.btn[aria-busy='true'] {
+  cursor: progress;
+}
+
+.field {
+  min-height: 44px;
+  border: 1px solid var(--color-ink);
+  background: var(--color-paper);
+  color: var(--color-ink);
+  padding: 0 var(--space-sm);
+  border-radius: 0;
+}
+.field:hover {
+  background: var(--color-paper-2);
+}
+.field:disabled {
+  color: var(--color-muted);
+  border-color: var(--color-rule);
+}
+.field[aria-invalid='true'] {
+  border-color: var(--color-accent);
+}
+
+/* The stamp: a plain verdict in the narrow face, framed; no tracking, no tilt. */
+.verdict {
+  display: inline-block;
+  padding: var(--space-3xs) var(--space-xs);
+  border: 1px solid currentColor;
+  font: 600 var(--text-xs) / 1.3 var(--font-body);
+  white-space: nowrap;
+}
+
+.on-band :focus-visible {
+  outline-color: var(--color-band-ink);
+}
+
+/* One live cue, kept for a buyer blocked on a row lock. */
 @keyframes lock-contention {
   0%,
   100% {
@@ -132,24 +172,11 @@ h3 {
   animation: lock-contention 0.9s ease-in-out infinite;
 }
 
-@keyframes print-in {
-  from {
-    clip-path: inset(0 0 100% 0);
-  }
-  to {
-    clip-path: inset(0 0 0 0);
-  }
-}
-.print-in {
-  animation: print-in 260ms cubic-bezier(0.16, 1, 0.3, 1);
-}
-
 @media (prefers-reduced-motion: reduce) {
-  *,
-  *::before,
-  *::after {
-    animation-duration: 0.001ms !important;
-    animation-iteration-count: 1 !important;
-    transition-duration: 0.001ms !important;
+  .lock-pulse {
+    animation: none;
+  }
+  .btn {
+    transition: none;
   }
 }

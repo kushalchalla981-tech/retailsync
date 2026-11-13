@@ -1,65 +1,25 @@
 # Design System: RetailSync
 
-<!-- impeccable:design-schema 1 -->
+Hallmark redesign (full, app scope), theme **Broadside**, colourway `bill`. Tokens live in `frontend/src/tokens.css`; base rules in `frontend/src/base.css`; component rules in `frontend/src/index.css`. Tailwind colour and font names map onto those tokens (`frontend/tailwind.config.js`); no literal colour exists outside the token block.
 
-## Visual World
+## World
 
-RetailSync combines the refinement of contemporary Scandinavian retail (clean proportions, generous whitespace, tactile cards, subtle warm-gray surfaces) with the high-precision observability of modern cloud observability platforms (dark-slate telemetry console, mono tabular figures, discrete status pulses).
+A printer's sale bill: grained buff stock, near-black ink, condensed wood-type capitals, one vermilion. Loud through tall capitals and heavy rules, never through drawn ornament. It suits a retail chain's flash sale and makes the one fact the demo proves, that the last unit sells once, read like a notice.
 
-The storefront operates in **Persuade mode** (crisp product merchandising, instant search feedback, intuitive checkout frictionlessness), while the live telemetry inspector operates in **Operate mode** (density, scannability, monospace logs, millisecond latency metrics, real-time payload inspection).
+## Type
 
-## Palette
+- **Six Caps** (display): the hero lines, prices, big figures. Each display line is fitted to its column (`FitLine`) and never wraps.
+- **Bevan** (slab): the wordmark, section heads, dialog heads.
+- **Archivo Narrow** 400/500/600: everything read, labels, tables, figures in tabular numerals.
 
-- **Ground**:
-  - Storefront Canvas: `#0F172A` (Obsidian Slate / Deep Space) to `#1E293B` (Surface Card)
-  - Light mode / Clean mode contrasts: `#F8FAFC` (Canvas White) with `#FFFFFF` cards
-  - Dedicated Theme: High-tech dark retail aesthetic designed to make telemetry logs pop alongside vibrant retail product photography
-- **Brand & Signal Accents**:
-  - Primary / Aiven Flame: `#FF5E3A` (Warm Coral Flame) — primary actions, Aiven identity homage
-  - Success / PostgreSQL Lock / Kafka ACK: `#10B981` (Emerald Glow) — confirmed stock, committed transactions
-  - Warning / Contention: `#F59E0B` (Amber Pulse) — low stock, concurrency locks acquiring
-  - Error / Oversell Prevented: `#EF4444` (Signal Red) — out of stock rejections, race condition prevention
-  - OpenSearch Indigo: `#6366F1` (Indigo Search) — search indexing, typo match highlights
-- **Neutrals**:
-  - Text Primary: `#F8FAFC` (high-contrast 12:1 against slate-900)
-  - Text Secondary: `#94A3B8` (contrast ≥ 5.2:1 against slate-900)
-  - Borders & Dividers: `#334155` (Slate 700) with subtle `#475569` hover states
+## Colour
 
-## Typography
+Paper `--color-paper`, wells `--color-paper-2/3`, ink `--color-ink`, muted `--color-muted`, rule `--color-rule`, and one accent `--color-accent` (vermilion). The accent marks failure, the last unit and the one vermilion display line, nothing else. The live ledger is an ink band with buff type. Services are named in words (PostgreSQL, Kafka, OpenSearch), never colour-coded.
 
-- **Display & Interface**: Inter / Modern System Sans (`ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif`)
-- **Code & Telemetry**: JetBrains Mono / Modern System Monospace (`ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace`)
-- **Tabular Figures**: `font-variant-numeric: tabular-nums` strictly applied across all price displays, stock counters, Kafka offsets, and transaction timestamps to eliminate jitter.
-- **Scale**:
-  - Display / Hero: `2rem` (32px), `font-semibold`, tracking `-0.02em`
-  - Section Headers: `1.25rem` (20px), `font-semibold`, tracking `-0.01em`
-  - Body: `0.9375rem` (15px), `leading-relaxed`, line length 65–75ch
-  - Captions / Microdata: `0.75rem` (12px), `font-medium`, tracking `0.02em`
+## Surfaces and controls
 
-## Elevation & Depth
+Square corners, no shadows. Rules at one point (hair, `--color-rule` or ink) or five points (ink, over a section). Frames are a 3px ink border with an inset keyline. Buttons: the filled ink block (primary, one per view) and the framed block (secondary), 44px, Archivo Narrow 600 capitals, all eight states. Inputs: square, 44px, 1px ink border.
 
-- **Cards**: `bg-slate-800/80 backdrop-blur-sm border border-slate-700/60 rounded-xl` with soft dual shadow (`box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.3), 0 2px 4px -2px rgba(0, 0, 0, 0.3)`).
-- **Interactive States**: Hover scales subtly (`scale-[1.01]`), border shifts to `border-slate-500/80`, and transition runs `duration-200 ease-out`.
-- **Telemetry Drawer**: Glassmorphic docked split-view or expandable bottom dock with live pulse indicators.
+## Motion
 
-## Components
-
-1. **Top Navigation Bar**: Brand identity, City store selector dropdown, Live Search input with real-time fuzzy feedback, Cart button with animated item badge, and Telemetry Console toggle button with live streaming status indicator.
-2. **Search Bar**: Keyboard-navigable (`Ctrl+K` / `/`), instant debounced query execution, typo tolerance match indicator (e.g., `"sneekers" → Matched "Sneakers" (OpenSearch Fuzzy)`), category chip filters.
-3. **Product Card**: High-resolution imagery, category tag, city store inventory badge (with real-time stock pill: "In Stock: 1 left" or "In Stock: 14 units"), currency formatting (`₹`), and immediate "Add to Cart" with optimistic animation.
-4. **Cart Drawer**: Slide-over drawer with item breakdown, quantity increment/decrement with stock bounds, subtotal calculation, tax, and checkout trigger.
-5. **Checkout & Race Modal**: Step-by-step or instant checkout with address, payment simulation, and explicit visualization of the PostgreSQL transaction isolation.
-6. **"All 3 Services in Action" Telemetry Console**:
-   - **PostgreSQL Tab**: Recent SQL transactions, row-level lock timeline (`SELECT ... FOR UPDATE`), committed orders table.
-   - **Apache Kafka Tab**: Streaming message stream with topic (`orders.placed`, `inventory.updated`), partition, offset, timestamp, and expandable JSON payload.
-   - **OpenSearch Tab**: Index update latency (<40ms), query DSL debugger, fuzzy typo score calculator.
-7. **Simulate Flash-Sale Race Condition Widget**:
-   - A dedicated live demo control with 1 click: triggers two simultaneous customer checkout requests against a product with only 1 item remaining in stock.
-   - Live visual outcome: User A acquires the PostgreSQL lock and completes order #1001; User B receives a polite "Out of stock - oversell prevented" response; Kafka publishes 1 event; OpenSearch marks the item "Sold Out" instantly.
-
-## Motion & Micro-interactions
-
-- Authored transition curves: `cubic-bezier(0.16, 1, 0.3, 1)` (smooth exponential ease-out).
-- Live event badge: Pulsing emerald dot (`animate-pulse`) when events stream through Kafka.
-- Stock count transition: Smooth numeric flash when inventory decrements.
-- Custom styled scrollbars and custom selection styling (`selection:bg-orange-500/30 selection:text-orange-200`).
+Printed, so still. The only animation is `lock-pulse`, reserved for a buyer waiting on a row lock in the race, and it stops under `prefers-reduced-motion`.
