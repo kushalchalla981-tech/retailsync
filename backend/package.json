@@ -17,6 +17,7 @@
     "db:migrate": "tsx src/db/migrations.ts",
     "test:conn": "tsx src/scripts/test-conn.ts",
     "test:api": "tsx src/scripts/api-smoke.ts",
+    "test:race": "tsx src/scripts/race-test.ts",
     "seed": "tsx src/scripts/seed.ts",
     "search:init": "tsx src/search/mappings.ts",
     "kafka:topics": "tsx src/kafka/topics.ts"
