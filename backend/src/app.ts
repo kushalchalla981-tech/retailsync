@@ -2,6 +2,10 @@
  * Fastify application factory: cross-cutting wiring (logging, error envelope,
  * liveness, closing Aiven connections) plus the /api route plugins.
  */
+import { existsSync } from 'node:fs';
+import { resolve } from 'node:path';
+
+import fastifyStatic from '@fastify/static';
 import Fastify, { type FastifyInstance } from 'fastify';
 
 import type { LogLevel } from './config.js';
@@ -58,6 +62,14 @@ export function buildApp(options: BuildAppOptions): FastifyInstance {
   app.register(orderRoutes, { prefix: '/api', db, orderEvents });
   app.register(searchRoutes, { prefix: '/api' });
   app.register(telemetryRoutes, { prefix: '/api' });
+
+  // Serve the built storefront (frontend/dist) from the same origin when present,
+  // with SPA fallback for non-API paths.
+  const staticDir = resolve(process.env.STATIC_DIR ?? 'frontend/dist');
+  if (existsSync(staticDir)) {
+    app.register(fastifyStatic, { root: staticDir, wildcard: false });
+    app.get('/*', (request, reply) => (request.url.startsWith('/api') ? reply.callNotFound() : reply.sendFile('index.html')));
+  }
 
   app.addHook('onClose', async (instance) => {
     const results = await Promise.allSettled([closePgPool(), disconnectKafka(), closeOpenSearch()]);

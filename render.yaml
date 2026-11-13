@@ -1,0 +1,32 @@
+# One Render web service: Fastify API + Kafka consumers + the built storefront.
+services:
+  - type: web
+    name: retailsync
+    runtime: node
+    plan: free
+    region: singapore
+    buildCommand: npm install --include=dev && npm run build --workspace frontend && npm run build --workspace backend
+    startCommand: node backend/dist/server.js
+    healthCheckPath: /health
+    envVars:
+      - key: NODE_VERSION
+        value: "24"
+      - key: NODE_ENV
+        value: production
+      - key: LOG_LEVEL
+        value: info
+      - key: AIVEN_KAFKA_AUTH
+        value: ssl
+      # Secrets: upload render.env (made by scripts/make-render-env.sh) in the dashboard.
+      - key: AIVEN_PG_URI
+        sync: false
+      - key: AIVEN_KAFKA_BROKERS
+        sync: false
+      - key: AIVEN_OPENSEARCH_URI
+        sync: false
+      - key: AIVEN_CA_CERT
+        sync: false
+      - key: AIVEN_KAFKA_ACCESS_CERT
+        sync: false
+      - key: AIVEN_KAFKA_ACCESS_KEY
+        sync: false

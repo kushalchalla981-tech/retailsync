@@ -29,3 +29,5 @@ Thumbs.db
 .vscode/
 .idea/
 certs
+graphify-out/
+render.env
