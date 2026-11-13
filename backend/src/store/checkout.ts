@@ -19,7 +19,23 @@
  *
  * Everything runs in ONE transaction. Any thrown error (including 409
  * OUT_OF_STOCK) rolls back: no order, no stock change, the cart stays active.
- * The order event hook runs only after COMMIT.
+ * The order event hook runs only after COMMIT, and only for a new order.
+ *
+ * Idempotency: re-submitting a checked-out cart (even concurrently - the cart
+ * row lock serializes the submits) replays the existing order with 200
+ * `replayed: true`. `orders.cart_id UNIQUE` (23505 orders_cart_id_key) is the
+ * backstop and also maps to a replay.
+ *
+ * Lock timeout (`SET LOCAL lock_timeout = '30s'`, first statement): bounds a
+ * wait behind a stuck lock holder without failing honest queues. Sizing: a
+ * checkout holds the hot inventory rows from the lock grant to COMMIT, about
+ * 5 round trips (decrement, order, order_items, cart, COMMIT). At the measured
+ * Aiven round trip of ~350-400 ms that is ~2 s per winning holder. In-process,
+ * at most PG_POOL_MAX (default 10) transactions are open at once, so the last
+ * waiter on one row sits behind at most 9 holders: 9 x 2 s = ~18 s worst
+ * case, and 30 s leaves ~1.7x headroom for latency spikes. Out-of-stock losers
+ * hold the lock for ~1 round trip, so they shorten the queue. A timeout
+ * surfaces as 503 CHECKOUT_BUSY (retryable), never as an oversell.
  */
 import { AppError, conflict, notFound, unprocessable } from '../http/contract.js';
 import {
@@ -76,6 +92,11 @@ export interface CheckoutResult {
 // SQL (every request value is a $n parameter)
 // ---------------------------------------------------------------------------
 
+/** See the header comment for the sizing argument. */
+export const CHECKOUT_LOCK_TIMEOUT = '30s';
+
+export const SET_LOCK_TIMEOUT_SQL = `SET LOCAL lock_timeout = '${CHECKOUT_LOCK_TIMEOUT}'`;
+
 /** (1) Lock only the cart row (`OF c`), not the joined store row. */
 export const LOCK_CHECKOUT_CART_SQL = `SELECT c.id::text AS id, c.status, c.location_id::text AS location_id,
        l.name AS location_name, l.city
@@ -121,6 +142,27 @@ RETURNING product_id::text AS product_id, quantity, unit_price::text AS unit_pri
 
 /** customer_id is set in the same UPDATE as the status (carts_one_active_per_customer). */
 export const MARK_CART_CHECKED_OUT_SQL = "UPDATE carts SET status = 'checked_out', customer_id = $2 WHERE id = $1";
+
+/** Order read-back in one round trip. Selects the customer NAME only, never the email. */
+function orderSelectSql(where: 'o.id' | 'o.cart_id'): string {
+  return `SELECT o.id::text AS id, o.status, o.payment_status, o.cart_id::text AS cart_id,
+       o.customer_id::text AS customer_id, cu.name AS customer_name,
+       o.location_id::text AS location_id, l.name AS location_name, l.city,
+       o.total_amount::text AS total_amount, o.created_at,
+       COALESCE((SELECT json_agg(json_build_object(
+                  'productId', oi.product_id::text, 'sku', p.sku, 'name', p.name,
+                  'quantity', oi.quantity, 'unitPrice', oi.unit_price::text,
+                  'lineTotal', oi.line_total::text) ORDER BY oi.product_id)
+                   FROM order_items oi JOIN products p ON p.id = oi.product_id
+                  WHERE oi.order_id = o.id), '[]'::json) AS items
+  FROM orders o
+  JOIN customers cu ON cu.id = o.customer_id
+  JOIN store_locations l ON l.id = o.location_id
+ WHERE ${where} = $1`;
+}
+
+export const ORDER_BY_ID_SQL = orderSelectSql('o.id');
+export const ORDER_BY_CART_SQL = orderSelectSql('o.cart_id');
 
 // ---------------------------------------------------------------------------
 // Row types
@@ -171,6 +213,21 @@ interface OrderItemRow {
   line_total: string;
 }
 
+interface OrderViewRow {
+  id: string;
+  status: string;
+  payment_status: string;
+  cart_id: string | null;
+  customer_id: string;
+  customer_name: string;
+  location_id: string;
+  location_name: string;
+  city: string;
+  total_amount: string;
+  created_at: Date | string;
+  items: { productId: string; sku: string; name: string; quantity: number; unitPrice: string; lineTotal: string }[];
+}
+
 // ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
@@ -197,18 +254,94 @@ function outOfStock(locationId: string, locationName: string, shortfalls: Shortf
 }
 
 interface PlacedOrder {
+  kind: 'placed';
   order: Order;
   event: OrderPlacedEvent;
+}
+
+/** The cart was already checked out: the existing order is read after this (write-free) transaction ends. */
+interface ReplayMarker {
+  kind: 'replay';
+}
+
+// ---------------------------------------------------------------------------
+// PostgreSQL error mapping
+// ---------------------------------------------------------------------------
+
+const RETRYABLE_SQLSTATES = new Set(['40P01', '40001', '55P03']);
+
+/**
+ * Map a pg error rejected by the checkout transaction:
+ *   23514 inventory_stock_quantity_nonnegative -> 409 OUT_OF_STOCK (CHECK backstop)
+ *   23505 orders_cart_id_key                   -> 'replay' (double-submit backstop)
+ *   40P01 / 40001 / 55P03                      -> 503 CHECKOUT_BUSY, retryable
+ *   anything else                              -> undefined (rethrow, becomes a 500)
+ */
+export function mapCheckoutDbError(err: unknown): AppError | 'replay' | undefined {
+  if (typeof err !== 'object' || err === null || err instanceof AppError) return undefined;
+  const { code, constraint } = err as { code?: unknown; constraint?: unknown };
+  if (typeof code !== 'string') return undefined;
+  if (code === '23514' && constraint === 'inventory_stock_quantity_nonnegative') {
+    return conflict('OUT_OF_STOCK', 'Insufficient stock to complete checkout', { sqlstate: code });
+  }
+  if (code === '23505' && constraint === 'orders_cart_id_key') return 'replay';
+  if (RETRYABLE_SQLSTATES.has(code)) {
+    return new AppError(503, 'CHECKOUT_BUSY', 'Checkout is busy, please retry', { retryable: true, sqlstate: code });
+  }
+  return undefined;
+}
+
+// ---------------------------------------------------------------------------
+// Order read-back
+// ---------------------------------------------------------------------------
+
+function orderFromRow(row: OrderViewRow): Order {
+  return {
+    id: String(row.id),
+    status: row.status,
+    paymentStatus: row.payment_status,
+    cartId: row.cart_id === null ? null : String(row.cart_id),
+    customer: { id: String(row.customer_id), name: row.customer_name },
+    location: { id: String(row.location_id), name: row.location_name, city: row.city },
+    items: (row.items ?? []).map((item) => ({
+      productId: String(item.productId),
+      sku: item.sku,
+      name: item.name,
+      quantity: Number(item.quantity),
+      unitPrice: money(item.unitPrice),
+      lineTotal: money(item.lineTotal),
+    })),
+    totalAmount: money(row.total_amount),
+    createdAt: iso(row.created_at),
+  };
+}
+
+/** One order by id or by cart id; 404 ORDER_NOT_FOUND otherwise. Never includes the customer email. */
+export async function getOrder(db: Queryable, by: { orderId: string } | { cartId: string }): Promise<Order> {
+  const [sql, value, label] =
+    'orderId' in by
+      ? [ORDER_BY_ID_SQL, by.orderId, `Order ${by.orderId}`]
+      : [ORDER_BY_CART_SQL, by.cartId, `Order for cart ${by.cartId}`];
+  const row = (await db.query<OrderViewRow>(sql, [value])).rows[0];
+  if (!row) throw notFound('ORDER_NOT_FOUND', `${label} not found`);
+  return orderFromRow(row);
 }
 
 // ---------------------------------------------------------------------------
 // Checkout
 // ---------------------------------------------------------------------------
 
-async function placeOrder(tx: Queryable, input: CheckoutInput): Promise<PlacedOrder> {
+async function placeOrder(tx: Queryable, input: CheckoutInput): Promise<PlacedOrder | ReplayMarker> {
+  await tx.query(SET_LOCK_TIMEOUT_SQL);
+
   // (a) Lock the cart row first (same lock every cart mutation takes).
   const cart = (await tx.query<LockedCartRow>(LOCK_CHECKOUT_CART_SQL, [input.cartId])).rows[0];
   if (!cart) throw notFound('CART_NOT_FOUND', `Cart ${input.cartId} not found`);
+  // checked_out is terminal and is set by the same transaction that inserted
+  // the order, so that order is committed and visible once this lock is
+  // granted. End the transaction at once (releasing the cart lock for the next
+  // submit) and read the order afterwards.
+  if (cart.status === 'checked_out') return { kind: 'replay' };
   if (cart.status !== 'active') {
     throw conflict('CART_NOT_ACTIVE', `Cart ${input.cartId} is ${cart.status} and cannot be checked out`, {
       status: cart.status,
@@ -231,6 +364,14 @@ async function placeOrder(tx: Queryable, input: CheckoutInput): Promise<PlacedOr
     isActive: row.is_active,
   }));
   if (items.length === 0) throw unprocessable('CART_EMPTY', 'Cannot check out an empty cart');
+  const inactive = items.filter((item) => !item.isActive);
+  if (inactive.length > 0) {
+    throw conflict(
+      'PRODUCT_UNAVAILABLE',
+      `No longer available: ${inactive.map((item) => item.name).join(', ')}. Remove it from the cart to check out`,
+      { skus: inactive.map((item) => item.sku) },
+    );
+  }
   items.sort((a, b) => compareIds(a.productId, b.productId));
 
   // (c) Customer row (lock order step 2), outside the inventory critical section.
@@ -339,7 +480,7 @@ async function placeOrder(tx: Queryable, input: CheckoutInput): Promise<PlacedOr
     })),
   };
 
-  return { order, event };
+  return { kind: 'placed', order, event };
 }
 
 /**
@@ -347,8 +488,35 @@ async function placeOrder(tx: Queryable, input: CheckoutInput): Promise<PlacedOr
  * strictly after COMMIT, and only for a newly created order.
  */
 export async function checkoutCart(deps: CheckoutDeps, input: CheckoutInput): Promise<CheckoutResult> {
-  const placed = await deps.db.transaction((tx) => placeOrder(tx, input));
-  // Post-COMMIT: a sink failure is logged by notifyOrderPlaced and never fails the checkout.
-  await notifyOrderPlaced(deps.events, placed.event, deps.log);
-  return { order: placed.order, replayed: false };
+  let outcome: PlacedOrder | ReplayMarker;
+  try {
+    outcome = await deps.db.transaction((tx) => placeOrder(tx, input));
+  } catch (error) {
+    // The transaction has already rolled back here.
+    const mapped = mapCheckoutDbError(error);
+    if (mapped === undefined) throw error;
+    if (mapped !== 'replay') throw mapped;
+    outcome = { kind: 'replay' };
+  }
+
+  if (outcome.kind === 'replay') return { order: await replayOrder(deps.db, input.cartId), replayed: true };
+
+  // Post-COMMIT, new orders only: a sink failure is logged by notifyOrderPlaced and never fails the checkout.
+  await notifyOrderPlaced(deps.events, outcome.event, deps.log);
+  return { order: outcome.order, replayed: false };
+}
+
+/** Existing order of a checked-out cart (read after the transaction ended). */
+async function replayOrder(db: Queryable, cartId: string): Promise<Order> {
+  try {
+    return await getOrder(db, { cartId });
+  } catch (error) {
+    // A checked-out cart whose order no longer exists can be neither replayed nor re-placed.
+    if (error instanceof AppError && error.code === 'ORDER_NOT_FOUND') {
+      throw conflict('CART_NOT_ACTIVE', `Cart ${cartId} is checked_out and cannot be checked out again`, {
+        status: 'checked_out',
+      });
+    }
+    throw error;
+  }
 }

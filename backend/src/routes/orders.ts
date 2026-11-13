@@ -8,7 +8,7 @@ import { z } from 'zod';
 
 import type { OrderEventSink } from '../events/order-events.js';
 import { parseInput, uuidId } from '../http/contract.js';
-import { checkoutCart } from '../store/checkout.js';
+import { checkoutCart, getOrder } from '../store/checkout.js';
 import type { Database } from '../store/db.js';
 
 export interface OrderRoutesOptions {
@@ -17,6 +17,7 @@ export interface OrderRoutesOptions {
 }
 
 export const checkoutParams = z.object({ cartId: uuidId });
+export const orderParams = z.object({ orderId: uuidId });
 
 export const checkoutBody = z.strictObject({
   customer: z.strictObject({
@@ -30,6 +31,12 @@ export const orderRoutes: FastifyPluginAsync<OrderRoutesOptions> = async (app, {
     const { cartId } = parseInput(checkoutParams, request.params, 'params');
     const { customer } = parseInput(checkoutBody, request.body, 'body');
     const result = await checkoutCart({ db, events: orderEvents, log: request.log }, { cartId, customer });
-    return reply.code(201).send(result);
+    // 201 for a newly placed order, 200 for an idempotent replay; the body is always { order, replayed }.
+    return reply.code(result.replayed ? 200 : 201).send(result);
+  });
+
+  app.get('/orders/:orderId', async (request) => {
+    const { orderId } = parseInput(orderParams, request.params, 'params');
+    return { order: await getOrder(db, { orderId }) };
   });
 };
