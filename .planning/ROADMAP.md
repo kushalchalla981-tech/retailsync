@@ -53,7 +53,7 @@ Plans:
 
 Plans:
 
-- [ ] 02-01-PLAN.md (wave 1): Fastify `/api` routes for categories, products (category/location/city/in-stock filters), store locations, inventory lookup, and cart sessions locked on the cart row. Includes zod validation, one error envelope, offline route tests, and a live `test:api` smoke run.
+- [x] 02-01-PLAN.md (wave 1): Fastify `/api` routes for categories, products (category/location/city/in-stock filters), store locations, inventory lookup, and cart sessions locked on the cart row. Includes zod validation, one error envelope, offline route tests, and a live `test:api` smoke run.
 - [ ] 02-02-PLAN.md (wave 2): Atomic checkout that locks inventory with `... ORDER BY id FOR UPDATE`. Returns 409 OUT_OF_STOCK, gives idempotent cart replay, and calls a post-commit OrderEventSink hook (where Phase 3 will add Kafka). Includes a live `npm run test:race` with last-unit, multi-item deadlock, and double-submit scenarios.
 
 ---
@@ -126,7 +126,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5
 | Phase                                              | Plans Complete | Status      | Completed |
 | -------------------------------------------------- | -------------- | ----------- | --------- |
 | 1. Cloud Foundation & Connectivity Baseline        | 3/3            | Complete    | 2026-11-13 |
-| 2. PostgreSQL Store Engine & Concurrency Locking   | 0/2            | Not started | -         |
+| 2. PostgreSQL Store Engine & Concurrency Locking   | 1/2            | In Progress | -         |
 | 3. Event-Driven Kafka Pipeline & OpenSearch Sync   | 0/2            | Not started | -         |
 | 4. Modern Storefront UI & Live Telemetry Inspector | 0/2            | Not started | -         |
 | 5. Pitch Deck, Demo Video & Submission Readiness   | 0/1            | Not started | -         |
