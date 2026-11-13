@@ -7,13 +7,27 @@
  * 201, N-1 x 409 OUT_OF_STOCK, final stock 0, units sold == stock decrement,
  * and nothing else (any 5xx / 503 CHECKOUT_BUSY is a FAIL).
  *
+ * Scenario `deadlock`: N two-item carts holding ELEC-001 + ELEC-010 in
+ * OPPOSITE orders (even/odd workers), K = floor(N/2) units of each. Expect
+ * K x 201, N-K x 409 OUT_OF_STOCK, both products at 0 with per-product
+ * conservation, and zero 503 CHECKOUT_BUSY (no 40P01 deadlock).
+ *
+ * Scenario `double-submit`: N simultaneous checkouts of ONE cart (ELEC-007
+ * x1). Expect one 201, N-1 x 200 `replayed: true`, a single order id, one
+ * order row, and a stock decrement of exactly 1.
+ *
+ * Each scenario prints a per-worker table and a summary line with the
+ * longest single request (the worst lock wait seen by a client) and the wall
+ * time of the fired batch.
+ *
  * The server is an in-process Fastify app listening on 127.0.0.1:0 (default)
  * or an already running API (`--base-url`). Cleanup (unless `--keep`) deletes
  * the run's orders, carts and customers in foreign-key order, re-queries them
  * and restores touched stock to its seed-catalog value - residue or an
  * unrestored row is a FAIL.
  *
- * Usage:  npm run test:race -- [--concurrency 10] [--sku ELEC-009]
+ * Usage:  npm run test:race -- [--scenario last-unit|deadlock|double-submit|all]
+ *                              [--concurrency 10] [--sku ELEC-009 (last-unit)]
  *                              [--location "Bangalore Central"] [--base-url URL] [--keep]
  *
  * Not a `*.test.ts` file on purpose: it needs live Aiven and must stay out of
@@ -42,10 +56,14 @@ import {
 // Arguments
 // ---------------------------------------------------------------------------
 
+export const RACE_SCENARIOS = ['last-unit', 'deadlock', 'double-submit'] as const;
+export type RaceScenario = (typeof RACE_SCENARIOS)[number];
+
 export interface RaceArgs {
   concurrency: number;
   sku: string;
   location: string;
+  scenario: RaceScenario | 'all';
   baseUrl?: string;
   keep: boolean;
 }
@@ -54,9 +72,10 @@ export const RACE_DEFAULTS = {
   concurrency: 10,
   sku: 'ELEC-009',
   location: 'Bangalore Central',
+  scenario: 'all',
 } as const;
 
-const VALUE_FLAGS = new Set(['--concurrency', '--sku', '--location', '--base-url']);
+const VALUE_FLAGS = new Set(['--concurrency', '--sku', '--location', '--scenario', '--base-url']);
 const BOOLEAN_FLAGS = new Set(['--keep']);
 
 export function parseRaceArgs(args: readonly string[]): RaceArgs {
@@ -93,6 +112,12 @@ export function parseRaceArgs(args: readonly string[]): RaceArgs {
       case '--location':
         parsed.location = value;
         break;
+      case '--scenario': {
+        const scenario = [...RACE_SCENARIOS, 'all'].find((name) => name === value);
+        if (scenario === undefined) throw new Error(`--scenario must be one of ${[...RACE_SCENARIOS, 'all'].join(', ')}`);
+        parsed.scenario = scenario as RaceArgs['scenario'];
+        break;
+      }
       case '--base-url': {
         let url: URL;
         try {
@@ -159,6 +184,10 @@ export interface ScenarioExpectation {
   created: number;
   /** Exact number of 409 OUT_OF_STOCK responses. */
   outOfStock: number;
+  /** Exact number of 200 `replayed: true` responses; 200 replays are only allowed when > 0 (default 0). */
+  replayed?: number;
+  /** Every 201/200 response must carry the same order id (double submit of one cart). */
+  singleOrderId?: boolean;
   /** Final stock per SKU. */
   finalStock: Record<string, number>;
   /** Minimum observed overlap for the run to count as a race (default 2). */
@@ -171,14 +200,19 @@ export interface ScenarioVerdict {
 }
 
 function outcomeKey(result: WorkerResult): string {
+  if (result.status === 200 && result.replayed === true) return '200 replayed';
   return result.code ? `${result.status} ${result.code}` : String(result.status);
 }
+
+const isReplay = (result: WorkerResult): boolean => result.status === 200 && result.replayed === true;
 
 export function evaluateScenario(observation: ScenarioObservation, expectation: ScenarioExpectation): ScenarioVerdict {
   const failures: string[] = [];
   const { results } = observation;
+  const expectedReplays = expectation.replayed ?? 0;
   const created = results.filter((result) => result.status === 201);
   const outOfStock = results.filter((result) => result.status === 409 && result.code === 'OUT_OF_STOCK');
+  const replays = results.filter(isReplay);
 
   if (created.length !== expectation.created) {
     failures.push(`expected ${expectation.created} x 201, got ${created.length}`);
@@ -186,10 +220,18 @@ export function evaluateScenario(observation: ScenarioObservation, expectation: 
   if (outOfStock.length !== expectation.outOfStock) {
     failures.push(`expected ${expectation.outOfStock} x 409 OUT_OF_STOCK, got ${outOfStock.length}`);
   }
+  if (expectedReplays > 0 && replays.length !== expectedReplays) {
+    failures.push(`expected ${expectedReplays} x 200 replayed, got ${replays.length}`);
+  }
 
+  // Anything other than the expected outcomes - in particular any 5xx, 503
+  // CHECKOUT_BUSY (deadlock / lock timeout) or network error - fails the run.
   const unexpected = new Map<string, number>();
   for (const result of results) {
-    const allowed = result.status === 201 || (result.status === 409 && result.code === 'OUT_OF_STOCK');
+    const allowed =
+      result.status === 201 ||
+      (result.status === 409 && result.code === 'OUT_OF_STOCK') ||
+      (expectedReplays > 0 && isReplay(result));
     if (!allowed) unexpected.set(outcomeKey(result), (unexpected.get(outcomeKey(result)) ?? 0) + 1);
   }
   for (const [key, count] of unexpected) {
@@ -212,6 +254,13 @@ export function evaluateScenario(observation: ScenarioObservation, expectation: 
 
   if (observation.orderCount !== created.length) {
     failures.push(`order count ${observation.orderCount} != successful checkouts ${created.length}`);
+  }
+
+  if (expectation.singleOrderId) {
+    const orderIds = new Set(
+      results.filter((result) => result.status === 201 || isReplay(result)).map((result) => result.orderId),
+    );
+    if (orderIds.size !== 1) failures.push(`${orderIds.size} distinct order ids, expected exactly 1`);
   }
 
   const overlap = maxInFlight(results);
@@ -368,10 +417,7 @@ function printTable(results: readonly WorkerResult[]): void {
 
 function tally(results: readonly WorkerResult[]): string {
   const counts = new Map<string, number>();
-  for (const result of results) {
-    const key = result.status === 200 && result.replayed ? '200 replayed' : outcomeKey(result);
-    counts.set(key, (counts.get(key) ?? 0) + 1);
-  }
+  for (const result of results) counts.set(outcomeKey(result), (counts.get(outcomeKey(result)) ?? 0) + 1);
   return [...counts.entries()]
     .sort(([a], [b]) => a.localeCompare(b))
     .map(([key, count]) => `${count} x ${key}`)
@@ -441,6 +487,99 @@ async function lastUnit(harness: Harness, args: RaceArgs): Promise<ScenarioOutco
   return report(name, observation, verdict, wallMs);
 }
 
+export const DEADLOCK_SKUS = ['ELEC-001', 'ELEC-010'] as const;
+export const DOUBLE_SUBMIT_SKU = 'ELEC-007';
+
+/**
+ * Multi-item deadlock safety: every cart holds BOTH products, even workers
+ * listing ELEC-001 first and odd workers ELEC-010 first. Locking per item in
+ * cart order would deadlock (40P01 -> 503); locking ORDER BY id must not.
+ * Stock is K = floor(N/2) of each, so exactly K checkouts can win.
+ */
+async function deadlock(harness: Harness, args: RaceArgs): Promise<ScenarioOutcome> {
+  const name = 'deadlock';
+  const [first, second] = await Promise.all(DEADLOCK_SKUS.map((sku) => resolveInventoryTarget(sku, args.location)));
+  if (!first || !second) throw new Error('deadlock targets not resolved');
+  const winners = Math.floor(args.concurrency / 2);
+  for (const target of [first, second]) {
+    harness.targets.push(target);
+    await setStock(target.inventoryId, winners);
+  }
+  console.log(
+    `[${name}] ${first.sku} + ${second.sku} @ ${first.locationName}: stock set to ${winners} each; preparing ${args.concurrency} carts in opposite item orders`,
+  );
+
+  const cartIds: string[] = [];
+  for (let worker = 1; worker <= args.concurrency; worker += 1) {
+    const ordered = worker % 2 === 0 ? [first, second] : [second, first];
+    cartIds.push(
+      await createCartWith(
+        harness,
+        first.locationId,
+        ordered.map((target) => ({ productId: target.productId, quantity: 1 })),
+      ),
+    );
+  }
+  const thunks = cartIds.map((cartId, index) => {
+    const email = `race-${harness.runId}-dl-${index + 1}@example.com`;
+    harness.record.emails.push(email);
+    return checkoutThunk(harness, index + 1, cartId, email);
+  });
+
+  await prewarmPool(harness, args.concurrency);
+  console.log(`[${name}] firing ${args.concurrency} simultaneous two-item checkouts`);
+  const { results, wallMs } = await fire(thunks);
+  const outcome = await readOutcome(cartIds, [
+    { target: first, initial: winners },
+    { target: second, initial: winners },
+  ]);
+  const observation: ScenarioObservation = { results, ...outcome };
+  const verdict = evaluateScenario(observation, {
+    created: winners,
+    outOfStock: args.concurrency - winners,
+    finalStock: { [first.sku]: 0, [second.sku]: 0 },
+  });
+  return report(name, observation, verdict, wallMs);
+}
+
+/**
+ * Double submit: N simultaneous checkouts of the SAME cart. The cart row lock
+ * serializes them; exactly one places the order, the rest replay it.
+ */
+async function doubleSubmit(harness: Harness, args: RaceArgs): Promise<ScenarioOutcome> {
+  const name = 'double-submit';
+  const target = await resolveInventoryTarget(DOUBLE_SUBMIT_SKU, args.location);
+  harness.targets.push(target);
+  const before = target.stock;
+  if (before < 1) throw new Error(`${target.sku} at ${target.locationName} has no stock - run \`npm run seed\``);
+  console.log(`[${name}] ${target.sku} @ ${target.locationName}: stock ${before}; one cart, ${args.concurrency} submits`);
+
+  const cartId = await createCartWith(harness, target.locationId, [{ productId: target.productId, quantity: 1 }]);
+  const email = `race-${harness.runId}-ds@example.com`;
+  harness.record.emails.push(email);
+  const thunks = Array.from({ length: args.concurrency }, (_, index) => checkoutThunk(harness, index + 1, cartId, email));
+
+  await prewarmPool(harness, args.concurrency);
+  console.log(`[${name}] firing ${args.concurrency} simultaneous checkouts of cart ${cartId}`);
+  const { results, wallMs } = await fire(thunks);
+  const outcome = await readOutcome([cartId], [{ target, initial: before }]);
+  const observation: ScenarioObservation = { results, ...outcome };
+  const verdict = evaluateScenario(observation, {
+    created: 1,
+    outOfStock: 0,
+    replayed: args.concurrency - 1,
+    singleOrderId: true,
+    finalStock: { [target.sku]: before - 1 },
+  });
+  return report(name, observation, verdict, wallMs);
+}
+
+const SCENARIO_RUNNERS: Record<RaceScenario, (harness: Harness, args: RaceArgs) => Promise<ScenarioOutcome>> = {
+  'last-unit': lastUnit,
+  deadlock,
+  'double-submit': doubleSubmit,
+};
+
 // ---------------------------------------------------------------------------
 // Runner
 // ---------------------------------------------------------------------------
@@ -475,12 +614,16 @@ async function main(argv: readonly string[]): Promise<void> {
 
   const outcomes: ScenarioOutcome[] = [];
   const problems: string[] = [];
+  const selected: readonly RaceScenario[] = args.scenario === 'all' ? RACE_SCENARIOS : [args.scenario];
   try {
-    try {
-      outcomes.push(await lastUnit(harness, args));
-    } catch (error) {
-      outcomes.push({ name: 'last-unit', pass: false, failures: [errorMessage(error)], summary: 'aborted' });
-      console.log(`[last-unit] FAIL: ${errorMessage(error)}\n`);
+    for (const scenario of selected) {
+      try {
+        outcomes.push(await SCENARIO_RUNNERS[scenario](harness, args));
+      } catch (error) {
+        // A failed scenario never skips the others or the cleanup below.
+        outcomes.push({ name: scenario, pass: false, failures: [errorMessage(error)], summary: `aborted: ${errorMessage(error)}` });
+        console.log(`[${scenario}] FAIL: ${errorMessage(error)}\n`);
+      }
     }
   } finally {
     if (args.keep) {
