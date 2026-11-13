@@ -21,6 +21,7 @@ import type { FastifyInstance } from 'fastify';
 
 import { buildApp } from '../app.js';
 import { errorMessage, isMainModule, runCli } from '../cli.js';
+import { getPostgresConfig } from '../config.js';
 import type { Queryable } from '../store/db.js';
 import { pgDatabase } from '../store/db.js';
 
@@ -229,8 +230,147 @@ export const catalogSteps: SmokeStep[] = [
   },
 ];
 
+// ---------------------------------------------------------------------------
+// Cart steps (Bangalore Central; every created cart is recorded for cleanup)
+// ---------------------------------------------------------------------------
+
+function product(state: SmokeState, sku: string): { id: string; price: number } {
+  return requireValue(state.products[sku], `${sku} id`);
+}
+
+function cartLine(cart: Json, productId: string): Json {
+  return cart.items.find((item: Json) => item.productId === productId);
+}
+
+/** Id of the main smoke cart (first cart created by the run). */
+function mainCartId(state: SmokeState): string {
+  return requireValue(state.cartIds[0], 'smoke cart id');
+}
+
+export const cartSteps: SmokeStep[] = [
+  {
+    name: 'POST /api/carts {Bangalore Central} -> 201',
+    async run({ app, state }) {
+      const bangaloreId = requireValue(state.locations['Bangalore Central'], 'Bangalore Central id');
+      const result = await call(app, 'POST', '/api/carts', { locationId: bangaloreId });
+      if (typeof result.body?.cart?.id === 'string') state.cartIds.push(result.body.cart.id);
+      expectStatus(result, 201, 'create cart');
+      const { cart } = result.body;
+      expect(cart.status === 'active', 'new cart must be active');
+      expect(cart.items.length === 0 && cart.subtotal === 0 && cart.itemCount === 0, 'new cart must be empty');
+      expect(cart.location?.name === 'Bangalore Central', 'cart location must be Bangalore Central');
+      return `cart ${cart.id}`;
+    },
+  },
+  {
+    name: 'POST items ELEC-001 x2 then x1 -> line quantity 3',
+    async run({ app, state }) {
+      const cartId = mainCartId(state);
+      const elec001 = product(state, 'ELEC-001');
+      const first = await call(app, 'POST', `/api/carts/${cartId}/items`, { productId: elec001.id, quantity: 2 });
+      expectStatus(first, 200, 'add ELEC-001 x2');
+      const second = await call(app, 'POST', `/api/carts/${cartId}/items`, { productId: elec001.id, quantity: 1 });
+      expectStatus(second, 200, 'add ELEC-001 x1');
+      const line = cartLine(second.body.cart, elec001.id);
+      expect(line?.quantity === 3, `expected line quantity 3, got ${line?.quantity}`);
+      return `lineTotal ${line.lineTotal}, subtotal ${second.body.cart.subtotal}`;
+    },
+  },
+  {
+    name: 'POST items ELEC-001 x97 -> 422 QUANTITY_LIMIT_EXCEEDED (line would be 100)',
+    async run({ app, state }) {
+      const cartId = mainCartId(state);
+      const elec001 = product(state, 'ELEC-001');
+      const result = await call(app, 'POST', `/api/carts/${cartId}/items`, { productId: elec001.id, quantity: 97 });
+      expectStatus(result, 422, 'add beyond 99');
+      expect(result.body?.error?.code === 'QUANTITY_LIMIT_EXCEEDED', 'error.code must be QUANTITY_LIMIT_EXCEEDED');
+    },
+  },
+  {
+    name: 'PUT items/ELEC-001 {quantity: 1}',
+    async run({ app, state }) {
+      const cartId = mainCartId(state);
+      const elec001 = product(state, 'ELEC-001');
+      const result = await call(app, 'PUT', `/api/carts/${cartId}/items/${elec001.id}`, { quantity: 1 });
+      expectStatus(result, 200, 'set ELEC-001 quantity');
+      const line = cartLine(result.body.cart, elec001.id);
+      expect(line?.quantity === 1, `expected quantity 1, got ${line?.quantity}`);
+    },
+  },
+  {
+    name: 'POST items ELEC-010, then DELETE items/ELEC-010',
+    async run({ app, state }) {
+      const cartId = mainCartId(state);
+      const elec010 = product(state, 'ELEC-010');
+      const added = await call(app, 'POST', `/api/carts/${cartId}/items`, { productId: elec010.id });
+      expectStatus(added, 200, 'add ELEC-010');
+      expect(cartLine(added.body.cart, elec010.id)?.quantity === 1, 'ELEC-010 must be in the cart with quantity 1');
+      const removed = await call(app, 'DELETE', `/api/carts/${cartId}/items/${elec010.id}`);
+      expectStatus(removed, 200, 'remove ELEC-010');
+      expect(!cartLine(removed.body.cart, elec010.id), 'ELEC-010 must be gone');
+    },
+  },
+  {
+    name: 'GET /api/carts/{id} -> 1 item, subtotal = ELEC-001 price',
+    async run({ app, state }) {
+      const cartId = mainCartId(state);
+      const elec001 = product(state, 'ELEC-001');
+      const result = await call(app, 'GET', `/api/carts/${cartId}`);
+      expectStatus(result, 200, 'read cart');
+      const { cart } = result.body;
+      expect(cart.items.length === 1, `expected 1 item, got ${cart.items.length}`);
+      expect(cart.itemCount === 1, `expected itemCount 1, got ${cart.itemCount}`);
+      expect(cart.subtotal === elec001.price, `subtotal ${cart.subtotal} must equal ELEC-001 price ${elec001.price}`);
+      const line = cart.items[0];
+      expect(Number.isInteger(line.availableQuantity) && line.availableQuantity >= 0, 'availableQuantity must be >= 0');
+      expect(cart.orderId === null, 'an active cart has no order');
+      return `subtotal ${cart.subtotal}, availableQuantity ${line.availableQuantity} at ${cart.location.name}`;
+    },
+  },
+  {
+    name: 'PATCH /api/carts/{id} {Mumbai Metro} -> location.city Mumbai',
+    async run({ app, state }) {
+      const cartId = mainCartId(state);
+      const mumbaiId = requireValue(state.locations['Mumbai Metro'], 'Mumbai Metro id');
+      const result = await call(app, 'PATCH', `/api/carts/${cartId}`, { locationId: mumbaiId });
+      expectStatus(result, 200, 'switch store');
+      expect(result.body.cart.location?.city === 'Mumbai', `expected city Mumbai, got ${result.body.cart.location?.city}`);
+      expect(result.body.cart.items.length === 1, 'items must survive a store switch');
+      return `availableQuantity at Mumbai Metro: ${result.body.cart.items[0].availableQuantity}`;
+    },
+  },
+  {
+    name: 'POST items on a checked_out cart -> 409 CART_NOT_ACTIVE',
+    async run({ app, state }) {
+      const bangaloreId = requireValue(state.locations['Bangalore Central'], 'Bangalore Central id');
+      const elec001 = product(state, 'ELEC-001');
+      const created = await call(app, 'POST', '/api/carts', { locationId: bangaloreId });
+      if (typeof created.body?.cart?.id === 'string') state.cartIds.push(created.body.cart.id);
+      expectStatus(created, 201, 'create second cart');
+      const cartId: string = created.body.cart.id;
+      // Simulate checkout's state change directly (checkout itself is plan 02-02).
+      await pgDatabase().query("UPDATE carts SET status = 'checked_out' WHERE id = $1", [cartId]);
+      const result = await call(app, 'POST', `/api/carts/${cartId}/items`, { productId: elec001.id });
+      expectStatus(result, 409, 'add to checked_out cart');
+      expect(result.body?.error?.code === 'CART_NOT_ACTIVE', 'error.code must be CART_NOT_ACTIVE');
+      expect(result.body.error.details?.status === 'checked_out', 'details.status must be checked_out');
+      const read = await call(app, 'GET', `/api/carts/${cartId}`);
+      expectStatus(read, 200, 'read checked_out cart');
+      expect(read.body.cart.items.length === 0, 'no item may be written to a checked_out cart');
+    },
+  },
+  {
+    name: 'GET /api/carts/not-a-uuid -> 400 VALIDATION_FAILED',
+    async run({ app }) {
+      const result = await call(app, 'GET', '/api/carts/not-a-uuid');
+      expectStatus(result, 400, 'malformed cart id');
+      expect(result.body?.error?.code === 'VALIDATION_FAILED', 'error.code must be VALIDATION_FAILED');
+    },
+  },
+];
+
 /** Every step, in order. Later plans append their steps here. */
-export const smokeSteps: SmokeStep[] = [...catalogSteps];
+export const smokeSteps: SmokeStep[] = [...catalogSteps, ...cartSteps];
 
 // ---------------------------------------------------------------------------
 // Runner
@@ -302,6 +442,9 @@ export async function cleanupSmokeData(db: Queryable, state: SmokeState): Promis
 }
 
 async function main(): Promise<void> {
+  // Fail fast with the variable names to fix (never values) instead of one
+  // 500 per step when PostgreSQL is not configured.
+  getPostgresConfig();
   const app = buildApp({ logLevel: 'warn' });
   activeApp = app;
   await app.ready();

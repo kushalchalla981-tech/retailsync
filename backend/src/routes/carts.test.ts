@@ -153,7 +153,8 @@ describe('POST /api/carts', () => {
       });
       assert.equal(res.statusCode, 400);
       const body = res.json();
-      assert.equal(body.error.code, 'FST_ERR_CTP_INVALID_JSON');
+      // Fastify 5's own code, passed through unchanged.
+      assert.equal(body.error.code, 'FST_ERR_CTP_INVALID_JSON_BODY');
       assert.equal(typeof body.error.message, 'string');
       assert.equal(typeof body.error.requestId, 'string');
       assert.equal(fake.calls.length, 0);

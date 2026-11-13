@@ -6,6 +6,7 @@ import Fastify, { type FastifyInstance } from 'fastify';
 
 import type { LogLevel } from './config.js';
 import { registerErrorHandling } from './http/contract.js';
+import { cartRoutes } from './routes/carts.js';
 import { catalogRoutes } from './routes/catalog.js';
 import { disconnectKafka } from './services/kafka.js';
 import { closeOpenSearch } from './services/opensearch.js';
@@ -30,6 +31,7 @@ export function buildApp(options: BuildAppOptions): FastifyInstance {
   app.get('/health', async () => ({ status: 'ok', uptimeSeconds: Math.round(process.uptime()) }));
 
   app.register(catalogRoutes, { prefix: '/api', db });
+  app.register(cartRoutes, { prefix: '/api', db });
 
   app.addHook('onClose', async (instance) => {
     const results = await Promise.allSettled([closePgPool(), disconnectKafka(), closeOpenSearch()]);
