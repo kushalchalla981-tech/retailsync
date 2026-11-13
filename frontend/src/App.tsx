@@ -23,11 +23,12 @@ export function App() {
   const [cartItems, setCartItems] = useState<CartItem[]>([]);
   const [isCartOpen, setIsCartOpen] = useState(false);
   const [isCheckoutOpen, setIsCheckoutOpen] = useState(false);
-  const [isTelemetryOpen, setIsTelemetryOpen] = useState(true); // Open by default for hackathon judges
+  const [isTelemetryOpen, setIsTelemetryOpen] = useState(true); // Floating dock by default
   const [raceProduct, setRaceProduct] = useState<Product | null>(null);
 
   // Trigger re-render on inventory changes
   const [catalogVersion, setCatalogVersion] = useState(0);
+
 
   // Search results query evaluation
   const searchEvaluation = useMemo(() => {
@@ -39,6 +40,11 @@ export function App() {
     if (!inStockOnly) return searchEvaluation.results;
     return searchEvaluation.results.filter((p) => (p.inventory[selectedCity] ?? 0) > 0);
   }, [searchEvaluation.results, inStockOnly, selectedCity]);
+
+  // Spotlight Product for Hero Section
+  const spotlightProduct = useMemo(() => {
+    return apiService.getProduct('prod-app-01') || searchEvaluation.results[0];
+  }, [catalogVersion, searchEvaluation.results]);
 
   // Cart Management
   const handleAddToCart = (product: Product) => {
@@ -77,13 +83,18 @@ export function App() {
     setCatalogVersion((v) => v + 1);
   };
 
-  // Keyboard shortcut listener for search
+  const handleTriggerSearch = () => {
+    const input = document.querySelector('input[type="text"]') as HTMLInputElement;
+    input?.focus();
+    input?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  };
+
+  // Keyboard shortcut listener for search (⌘K or /)
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === '/' && document.activeElement?.tagName !== 'INPUT') {
+      if ((e.key === '/' || (e.key === 'k' && (e.metaKey || e.ctrlKey))) && document.activeElement?.tagName !== 'INPUT') {
         e.preventDefault();
-        const searchInput = document.querySelector('input[type="text"]') as HTMLInputElement;
-        searchInput?.focus();
+        handleTriggerSearch();
       }
     };
     window.addEventListener('keydown', handleKeyDown);
@@ -93,8 +104,8 @@ export function App() {
   const totalCartUnits = cartItems.reduce((acc, curr) => acc + curr.quantity, 0);
 
   return (
-    <div className="relative min-h-screen w-full overflow-x-hidden bg-slate-950 text-slate-100 flex flex-col pb-36">
-      {/* Ambient Motion Background (Drifting Data Nodes & Mesh) */}
+    <div className="relative min-h-screen w-full overflow-x-hidden bg-[#070A12] text-slate-100 flex flex-col pb-28">
+      {/* Ambient Geometric Matrix Mesh Background */}
       <MotionBackground />
 
       {/* Top Navbar */}
@@ -106,20 +117,23 @@ export function App() {
         onOpenTelemetry={() => setIsTelemetryOpen((prev) => !prev)}
         isTelemetryOpen={isTelemetryOpen}
         onResetCatalog={handleResetCatalog}
+        onTriggerSearch={handleTriggerSearch}
       />
 
-      {/* Hero Section */}
+      {/* Editorial Hero Section */}
       <HeroSection
-        onSimulateRaceClick={() => {
-          const target = apiService.getProduct('prod-app-01');
-          if (target) setRaceProduct(target);
+        spotlightProduct={spotlightProduct}
+        selectedCity={selectedCity}
+        onSimulateRaceClick={(product) => setRaceProduct(product)}
+        onTypoSearchClick={() => {
+          setSearchQuery('snikers');
+          handleTriggerSearch();
         }}
-        onTypoSearchClick={() => setSearchQuery('snikers')}
         onOpenTelemetryClick={() => setIsTelemetryOpen(true)}
       />
 
       {/* Main Storefront Catalog Area */}
-      <main className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 flex-1 space-y-6 w-full">
+      <main className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10 flex-1 space-y-8 w-full">
         {/* Search, Filter & Typo Engine */}
         <SearchBar
           searchQuery={searchQuery}
@@ -135,19 +149,24 @@ export function App() {
           latencyMs={searchEvaluation.latencyMs}
         />
 
-        {/* Product Catalog Grid with Staggered Visual Flow */}
+        {/* Product Catalog Grid */}
         <div className="space-y-4">
-          <div className="flex items-center justify-between">
-            <h2 className="text-base font-bold text-white tracking-tight">
-              Available Catalog ({displayedProducts.length} items in {selectedCity})
-            </h2>
-            <span className="text-xs text-slate-400">
-              Real-time multi-city inventory
+          <div className="flex items-center justify-between border-b border-slate-800/80 pb-3">
+            <div>
+              <h2 className="font-display text-lg font-bold text-white tracking-tight">
+                Curated Inventory ({displayedProducts.length} items in {selectedCity})
+              </h2>
+              <p className="text-xs text-slate-400 mt-0.5">
+                Real-time multi-city availability synced directly from OpenSearch index
+              </p>
+            </div>
+            <span className="font-mono text-[11px] text-slate-400">
+              LOCATION // {selectedCity.toUpperCase()}
             </span>
           </div>
 
           {displayedProducts.length === 0 ? (
-            <div className="p-12 text-center rounded-2xl bg-slate-900 border border-slate-800 space-y-3">
+            <div className="p-16 text-center rounded-2xl bg-slate-900 border border-slate-800 space-y-3">
               <Search className="w-8 h-8 text-slate-500 mx-auto" />
               <p className="text-sm font-semibold text-slate-200">No matching products found</p>
               <p className="text-xs text-slate-400">
@@ -155,7 +174,7 @@ export function App() {
               </p>
             </div>
           ) : (
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
               {displayedProducts.map((product) => (
                 <ProductCard
                   key={product.id}
@@ -207,7 +226,7 @@ export function App() {
         />
       )}
 
-      {/* Docked All 3 Services Live Telemetry Inspector */}
+      {/* Docked Floating Live Telemetry Inspector */}
       <TelemetryInspector
         isOpen={isTelemetryOpen}
         onClose={() => setIsTelemetryOpen(false)}

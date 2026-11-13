@@ -14,25 +14,29 @@ export default {
           200: '#ffd4c7',
           300: '#ffb5a0',
           400: '#ff8867',
-          500: '#ff5e3a', // Aiven flame / primary
-          600: '#f0431d',
-          700: '#c93110',
-          800: '#a52b11',
-          900: '#872713',
+          500: '#ff5e3a', // Aiven flame / warm coral
+          600: '#ea4721',
+          700: '#c53412',
+          800: '#9e2d13',
+          900: '#7e2916',
         },
-        slate: {
-          850: '#162032',
-          950: '#0b1120',
+        obsidian: {
+          950: '#070A12',
+          900: '#0B101D',
+          850: '#101729',
+          800: '#18223B',
+          750: '#222F4F',
+          700: '#2D3D64',
         }
       },
       fontFamily: {
-        sans: ['Inter', 'ui-sans-serif', 'system-ui', '-apple-system', 'BlinkMacSystemFont', 'Segoe UI', 'Roboto', 'sans-serif'],
-        mono: ['JetBrains Mono', 'ui-monospace', 'SFMono-Regular', 'Menlo', 'Monaco', 'Consolas', 'monospace'],
+        display: ['Plus Jakarta Sans', 'Inter', 'sans-serif'],
+        sans: ['Inter', 'ui-sans-serif', 'system-ui', 'sans-serif'],
+        mono: ['JetBrains Mono', 'ui-monospace', 'monospace'],
       },
-      boxShadow: {
-        'glow-brand': '0 0 25px -5px rgba(255, 94, 58, 0.3)',
-        'glow-emerald': '0 0 25px -5px rgba(16, 185, 129, 0.3)',
-        'glow-indigo': '0 0 25px -5px rgba(99, 102, 241, 0.3)',
+      letterSpacing: {
+        tighter: '-0.04em',
+        tight: '-0.02em',
       }
     },
   },
