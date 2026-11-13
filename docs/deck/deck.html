@@ -1,0 +1,169 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<title>RetailSync pitch</title>
+<style>
+  @font-face { font-family: "Six Caps"; src: url("SixCaps.ttf"); }
+  @font-face { font-family: "Bevan"; src: url("Bevan.ttf"); }
+  @font-face { font-family: "Archivo Narrow"; src: url("ArchivoNarrow.ttf"); font-weight: 400 700; }
+  :root {
+    --paper: oklch(92% 0.028 88); --paper-2: oklch(88.5% 0.032 88); --ink: oklch(18% 0.01 50);
+    --muted: oklch(43% 0.02 62); --rule: oklch(75% 0.028 82); --accent: oklch(53% 0.19 33);
+    --display: "Six Caps", sans-serif; --slab: "Bevan", serif; --body: "Archivo Narrow", sans-serif;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { background: var(--paper); color: var(--ink); font-family: var(--body); }
+  .slide { position: relative; width: 1920px; height: 1080px; padding: 80px 112px 72px; overflow: hidden; display: flex; flex-direction: column; background: var(--paper); }
+  .top { display: flex; justify-content: space-between; align-items: baseline; padding-bottom: 18px; border-bottom: 5px solid var(--ink); font-size: 26px; }
+  .top b { font-family: var(--slab); font-weight: 400; text-transform: uppercase; font-size: 30px; }
+  .top span { color: var(--muted); }
+  .display { font-family: var(--display); text-transform: uppercase; line-height: 0.9; letter-spacing: 0.02em; white-space: nowrap; }
+  .slab { font-family: var(--slab); text-transform: uppercase; line-height: 1.05; font-weight: 400; }
+  .accent { color: var(--accent); }
+  .muted { color: var(--muted); }
+  h1.display { font-size: 190px; margin-top: 40px; }
+  h2.display { font-size: 150px; margin-top: 36px; }
+  .grid2 { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 72px; margin-top: 44px; flex: 1; min-height: 0; }
+  .grid3 { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 56px; margin-top: 48px; }
+  .item { border-top: 5px solid var(--ink); padding-top: 18px; }
+  .item h3 { font-family: var(--slab); font-weight: 400; text-transform: uppercase; font-size: 34px; line-height: 1.05; }
+  .item p { margin-top: 12px; font-size: 27px; line-height: 1.35; color: var(--ink); }
+  .rows { margin-top: 8px; }
+  .row { display: grid; grid-template-columns: 300px minmax(0, 1fr); gap: 32px; padding: 22px 0; border-top: 1px solid var(--rule); font-size: 28px; line-height: 1.35; }
+  .row:first-child { border-top: 5px solid var(--ink); }
+  .row dt { font-family: var(--slab); text-transform: uppercase; font-size: 26px; line-height: 1.2; }
+  .frame { border: 3px solid var(--ink); box-shadow: inset 0 0 0 3px var(--paper), inset 0 0 0 4px var(--ink); padding: 8px; background: var(--paper); }
+  .frame img { display: block; width: 100%; }
+  .cap { margin-top: 12px; font-size: 22px; color: var(--muted); }
+  .figs { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 40px; margin-top: auto; }
+  .fig { border-top: 5px solid var(--ink); padding-top: 14px; }
+  .fig .n { font-family: var(--display); font-size: 150px; line-height: 0.9; }
+  .fig .l { margin-top: 6px; font-size: 24px; color: var(--muted); }
+  .flow { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); margin-top: 52px; border-top: 5px solid var(--ink); }
+  .step { padding: 24px 28px 0 0; border-right: 1px solid var(--rule); margin-right: 28px; }
+  .step:last-child { border-right: 0; margin-right: 0; }
+  .step .k { font-size: 22px; color: var(--muted); }
+  .step .t { font-family: var(--slab); text-transform: uppercase; font-size: 34px; margin-top: 10px; line-height: 1.05; }
+  .step p { margin-top: 12px; font-size: 24px; line-height: 1.35; }
+  .stack { margin-top: auto; padding-top: 22px; border-top: 1px solid var(--ink); font-size: 26px; line-height: 1.5; }
+  .stack b { font-weight: 600; }
+  .particulars { margin-top: auto; }
+</style>
+</head>
+<body>
+
+<!-- 1 Title -->
+<section class="slide" id="s1">
+  <div class="top"><b>Build Bengaluru 2.0</b><span>Qualification submission</span></div>
+  <h1 class="display" style="font-size: 300px; margin-top: 56px">RetailSync</h1>
+  <p class="display accent" style="font-size: 120px; margin-top: 8px">Every sale on the ledger.</p>
+  <dl class="rows particulars">
+    <div class="row"><dt>Theme</dt><dd>Build the online store on Aiven: PostgreSQL, Apache Kafka and OpenSearch</dd></div>
+    <div class="row"><dt>Team name and ID</dt><dd data-edit="team">[TEAM NAME], [TEAM ID]</dd></div>
+    <div class="row"><dt>College</dt><dd data-edit="college">[COLLEGE NAME]</dd></div>
+  </dl>
+</section>
+
+<!-- 2 Problem + gap -->
+<section class="slide" id="s2">
+  <div class="top"><b>RetailSync</b><span>Problem and existing gap</span></div>
+  <h2 class="display">The last unit sells twice.</h2>
+  <div class="grid2">
+    <dl class="rows">
+      <div class="row"><dt>The problem</dt><dd>A chain that sold only in stores goes online across India. Many shoppers press buy on the same item at the same moment.</dd></div>
+      <div class="row"><dt>Who is affected</dt><dd>Shoppers whose paid orders get cancelled, staff fixing stock by hand, and the business paying refunds in every sale.</dd></div>
+      <div class="row"><dt>Current solutions</dt><dd>Carts that read stock and write it later, nightly syncs between store and site, keyword-only search.</dd></div>
+    </dl>
+    <div>
+      <div class="item"><h3 class="accent">Overselling</h3><p>Check then write, under load, sells one unit to two people.</p></div>
+      <div class="item" style="margin-top: 36px"><h3>Stale stock</h3><p>Search and listings lag the database, so gone items still show.</p></div>
+      <div class="item" style="margin-top: 36px"><h3>Rigid search</h3><p>"bluetoth" finds nothing, and there is no filter for what your own city has.</p></div>
+    </div>
+  </div>
+</section>
+
+<!-- 3 Proposed solution -->
+<section class="slide" id="s3">
+  <div class="top"><b>RetailSync</b><span>Proposed solution</span></div>
+  <h2 class="display">One truth. Events for the rest.</h2>
+  <p style="margin-top: 36px; font-size: 34px; line-height: 1.35; max-width: 1400px">
+    PostgreSQL decides every sale under a row lock. Kafka tells the rest of the system what happened. OpenSearch answers searches with live stock.
+  </p>
+  <div class="grid3">
+    <div class="item"><h3>How it solves it</h3><p>Checkout locks the exact stock rows, so two buyers can never take the same last unit.</p></div>
+    <div class="item"><h3>Always current</h3><p>Each committed order becomes a Kafka event; consumers update the search index in seconds, not overnight.</p></div>
+    <div class="item"><h3 class="accent">Why it is better</h3><p>The database guarantees correctness, and a live ledger shows every step as it happens.</p></div>
+  </div>
+</section>
+
+<!-- 4 Architecture + stack -->
+<section class="slide" id="s4">
+  <div class="top"><b>RetailSync</b><span>Architecture and tech stack</span></div>
+  <h2 class="display">Input, process, output.</h2>
+  <div class="flow">
+    <div class="step"><div class="k">Input</div><div class="t">Storefront</div><p>React shopper browses, searches, adds to cart, checks out.</p></div>
+    <div class="step"><div class="k">Process 1</div><div class="t">Fastify API</div><p>Validates input, runs the locked checkout transaction.</p></div>
+    <div class="step"><div class="k">Process 2</div><div class="t">PostgreSQL</div><p>Rows locked in a fixed order, stock decremented, order written, committed.</p></div>
+    <div class="step"><div class="k">Process 3</div><div class="t">Kafka</div><p>orders.placed, then a consumer publishes inventory.updated.</p></div>
+    <div class="step"><div class="k">Output</div><div class="t accent">OpenSearch</div><p>Search-sync consumer reindexes the product; search shows the new stock.</p></div>
+  </div>
+  <div class="stack">
+    <b>Frontend</b> React 18, Vite, Tailwind. <b>Backend</b> Node.js, Fastify 5, TypeScript, zod.
+    <b>Data</b> Aiven PostgreSQL 18, Aiven Kafka 4.3 (KafkaJS), Aiven OpenSearch 3.6. <b>Hosting</b> Render, credentials only in environment variables, TLS verified to the Aiven CA.
+  </div>
+</section>
+
+<!-- 5 Key features -->
+<section class="slide" id="s5">
+  <div class="top"><b>RetailSync</b><span>Key features</span></div>
+  <div class="grid2" style="margin-top: 32px; grid-template-columns: minmax(0, 5fr) minmax(0, 6fr)">
+    <div>
+      <h2 class="display" style="margin-top: 0; font-size: 130px">Four, all real.</h2>
+      <dl class="rows" style="margin-top: 28px">
+        <div class="row" style="grid-template-columns: 250px minmax(0,1fr)"><dt>Zero oversell</dt><dd>Row locks in id order, 409 on rollback, replay-safe double submits.</dd></div>
+        <div class="row" style="grid-template-columns: 250px minmax(0,1fr)"><dt class="accent">Last-unit race</dt><dd>Five real carts buy the last PS5 at once: one commits, four get 409.</dd></div>
+        <div class="row" style="grid-template-columns: 250px minmax(0,1fr)"><dt>Typo search</dt><dd>"bluetoth" finds 3 Bluetooth products in about 30 ms.</dd></div>
+        <div class="row" style="grid-template-columns: 250px minmax(0,1fr)"><dt>Live ledger</dt><dd>Every commit, Kafka offset and index sync streams to the screen.</dd></div>
+      </dl>
+    </div>
+    <figure><div class="frame"><img src="../screenshots/3-race.png" alt="" /></div><figcaption class="cap">The race against live Aiven PostgreSQL: stock 1 to 0, one order.</figcaption></figure>
+  </div>
+</section>
+
+<!-- 6 Impact + feasibility -->
+<section class="slide" id="s6">
+  <div class="top"><b>RetailSync</b><span>Impact and feasibility</span></div>
+  <h2 class="display">Ready for a flash sale.</h2>
+  <dl class="rows" style="margin-top: 40px">
+    <div class="row"><dt>Who benefits</dt><dd>Shoppers keep what they pay for, stores stop reconciling by hand, the chain runs sales without refunds.</dd></div>
+    <div class="row"><dt>Real-world impact</dt><dd>Overselling is impossible by construction, and search shows what each city really has.</dd></div>
+    <div class="row"><dt>Scalability</dt><dd>Managed Aiven services scale apart; Kafka partitions by key; consumers and the API scale out.</dd></div>
+    <div class="row"><dt>Feasibility</dt><dd>Runs today on Aiven free and trial tiers plus one Render web service.</dd></div>
+  </dl>
+  <div class="figs">
+    <div class="fig"><div class="n">290</div><div class="l">Automated tests passing</div></div>
+    <div class="fig"><div class="n accent">0</div><div class="l">Units oversold in the live race</div></div>
+    <div class="fig"><div class="n">1.9 s</div><div class="l">Order to search index, measured</div></div>
+    <div class="fig"><div class="n">61</div><div class="l">Products across 3 cities</div></div>
+  </div>
+</section>
+
+<!-- 7 Demo + conclusion -->
+<section class="slide" id="s7">
+  <div class="top"><b>RetailSync</b><span>Demo and conclusion</span></div>
+  <div class="grid2" style="margin-top: 36px; grid-template-columns: minmax(0, 7fr) minmax(0, 4fr)">
+    <figure><div class="frame"><img src="../screenshots/1-home.png" alt="" /></div><figcaption class="cap">The storefront with its live ledger, wired to Aiven.</figcaption></figure>
+    <div style="display: flex; flex-direction: column">
+      <dl class="rows">
+        <div class="row" style="grid-template-columns: 1fr"><dt>Live demo</dt><dd data-edit="url">[DEMO URL]</dd></div>
+        <div class="row" style="grid-template-columns: 1fr"><dt>Try it</dt><dd>Search "bluetoth", add to cart, check out, then run the last-unit race.</dd></div>
+      </dl>
+      <p class="display accent" style="margin-top: auto; font-size: 104px; white-space: normal; line-height: 0.95">Sold once. Proven live.</p>
+      <p style="margin-top: 18px; font-size: 26px; line-height: 1.35">Pick RetailSync: all three Aiven services do real work, and you can watch the database refuse to oversell.</p>
+    </div>
+  </div>
+</section>
+
+</body>
+</html>
