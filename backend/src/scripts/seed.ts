@@ -243,7 +243,7 @@ export const INDEX_SOURCE_SQL = `SELECT p.id, p.sku, p.name, p.description, c.sl
   JOIN categories c ON c.id = p.category_id
   LEFT JOIN inventory i ON i.product_id = p.id
   LEFT JOIN store_locations l ON l.id = i.location_id
- WHERE p.is_active
+ WHERE p.is_active AND ($1::bigint IS NULL OR p.id = $1::bigint)
  GROUP BY p.id, c.id
  ORDER BY p.id`;
 
@@ -252,8 +252,9 @@ export const INACTIVE_PRODUCTS_SQL = 'SELECT id FROM products WHERE NOT is_activ
 
 type IndexSourceRow = ProductSource & { inventory: ProductInventoryEntry[] };
 
-export async function loadProductDocuments(db: Queryable): Promise<ProductDocument[]> {
-  const { rows } = await db.query<IndexSourceRow>(INDEX_SOURCE_SQL);
+/** All active products' documents, or just one product's when `productId` is given. */
+export async function loadProductDocuments(db: Queryable, productId?: string): Promise<ProductDocument[]> {
+  const { rows } = await db.query<IndexSourceRow>(INDEX_SOURCE_SQL, [productId ?? null]);
   return rows.map(({ inventory, ...product }) =>
     buildProductDocument(
       product,

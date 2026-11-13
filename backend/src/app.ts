@@ -10,6 +10,8 @@ import { registerErrorHandling } from './http/contract.js';
 import { cartRoutes } from './routes/carts.js';
 import { catalogRoutes } from './routes/catalog.js';
 import { orderRoutes } from './routes/orders.js';
+import { searchRoutes } from './routes/search.js';
+import { corsHeaders, telemetryRoutes } from './routes/telemetry.js';
 import { disconnectKafka } from './services/kafka.js';
 import { closeOpenSearch } from './services/opensearch.js';
 import { closePgPool } from './services/postgres.js';
@@ -34,6 +36,19 @@ export function buildApp(options: BuildAppOptions): FastifyInstance {
   // Must precede route registration so every plugin inherits the envelope.
   registerErrorHandling(app);
 
+  // CORS for the separately hosted storefront (CORS_ORIGIN; default any origin).
+  app.addHook('onRequest', async (request, reply) => {
+    for (const [k, v] of Object.entries(corsHeaders(request.headers.origin))) reply.header(k, v);
+    if (request.method === 'OPTIONS') {
+      reply
+        .header('access-control-allow-methods', 'GET,POST,PUT,PATCH,DELETE,OPTIONS')
+        .header('access-control-allow-headers', 'content-type')
+        .header('access-control-max-age', '86400')
+        .code(204)
+        .send();
+    }
+  });
+
   // Liveness only: does not touch Aiven services (connectivity diagnostics are
   // a separate, explicit check so a slow dependency never fails liveness).
   app.get('/health', async () => ({ status: 'ok', uptimeSeconds: Math.round(process.uptime()) }));
@@ -41,6 +56,8 @@ export function buildApp(options: BuildAppOptions): FastifyInstance {
   app.register(catalogRoutes, { prefix: '/api', db });
   app.register(cartRoutes, { prefix: '/api', db });
   app.register(orderRoutes, { prefix: '/api', db, orderEvents });
+  app.register(searchRoutes, { prefix: '/api' });
+  app.register(telemetryRoutes, { prefix: '/api' });
 
   app.addHook('onClose', async (instance) => {
     const results = await Promise.allSettled([closePgPool(), disconnectKafka(), closeOpenSearch()]);
