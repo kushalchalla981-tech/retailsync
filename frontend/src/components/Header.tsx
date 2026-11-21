@@ -19,6 +19,7 @@ interface HeaderProps {
   onAbout: () => void;
   onToggleSound: () => void;
   onSearch: () => void;
+  onGuide?: () => void;
   /** Role-aware: owner -> dashboard, creator -> store creator, visitor -> profile. */
   onProfile: () => void;
 }
@@ -32,7 +33,7 @@ const PROFILE = {
 } as const;
 
 /** Mirrors the reference `.app-header`: name left, links right with the thunder underline when active. */
-export const Header: React.FC<HeaderProps> = ({ visible, aboutOpen, isMuted, onHome, onAbout, onToggleSound, onSearch, onProfile }) => {
+export const Header: React.FC<HeaderProps> = ({ visible, aboutOpen, isMuted, onHome, onAbout, onToggleSound, onSearch, onGuide, onProfile }) => {
   const { role } = useRole();
   const { count, setOpen } = useCart();
   const isMac = typeof navigator !== 'undefined' && /Mac/i.test(navigator.platform);
@@ -81,6 +82,9 @@ export const Header: React.FC<HeaderProps> = ({ visible, aboutOpen, isMuted, onH
             </a>
           </SignInButton>
         )}
+        <a href="#guide" onClick={(e) => { e.preventDefault(); onGuide?.(); }} className="cursor-pointer">
+          <span>Tour</span>
+        </a>
         <a href="#sound" className="app-header__sound" onClick={(e) => { e.preventDefault(); onToggleSound(); }}>
           <span>{isMuted ? 'Sound off' : 'Sound on'}</span>
         </a>

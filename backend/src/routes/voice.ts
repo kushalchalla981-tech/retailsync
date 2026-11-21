@@ -13,6 +13,7 @@ import { z } from 'zod';
 import { AppError, parseInput } from '../http/contract.js';
 import { gnaniClient, speakable, TTS_VOICES, type SpeechClient } from '../voice/gnani-client.js';
 import { classify } from '../voice/intent.js';
+import { askGemma3 } from '../voice/ollama-client.js';
 
 const MAX_AUDIO_BYTES = 1_200_000; // 30 s of 16 kHz 16-bit mono WAV is ~960 KB
 const PER_CLIENT_PER_MIN = 30;
@@ -23,6 +24,17 @@ const actionBody = z.object({
   transcript: z.string().max(500),
   stores: z.array(z.object({ id: z.string().max(80), name: z.string().max(80) })).max(200).default([]),
   creating: z.object({ name: z.string().max(80).optional(), category: z.string().max(60).optional(), theme: z.string().max(30).optional() }).nullable().optional(),
+});
+const gemmaBody = z.object({
+  query: z.string().trim().min(1).max(500),
+  context: z
+    .object({
+      storeName: z.string().max(80).optional(),
+      category: z.string().max(60).optional(),
+      catalog: z.array(z.object({ name: z.string(), price: z.string(), stock: z.number() })).max(50).optional(),
+      ordersCount: z.number().optional(),
+    })
+    .optional(),
 });
 
 /** Fixed-window counters; small and in-process (one Render instance). */
@@ -78,5 +90,12 @@ export const voiceRoutes: FastifyPluginAsync<{ speech?: SpeechClient }> = async 
   app.post('/voice/action', async (request) => {
     const body = parseInput(actionBody, request.body, 'body');
     return classify(body.transcript, { stores: body.stores, creating: body.creating ?? null });
+  });
+
+  app.post('/voice/gemma', async (request) => {
+    const { query, context } = parseInput(gemmaBody, request.body, 'body');
+    const res = await askGemma3(query, context);
+    if (!res) return { reply: null, model: 'none', latencyMs: 0 };
+    return res;
   });
 };

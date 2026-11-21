@@ -13,6 +13,7 @@ interface AboutModalProps {
   onClose: () => void;
   /** Opens this service's ledger when About opens (voice). */
   initialLedger?: Service | null;
+  onOpenTour?: () => void;
 }
 
 const CARDS: { id: Service; name: string; icon: React.ReactNode; glow: string; text: React.ReactNode }[] = [
@@ -21,7 +22,7 @@ const CARDS: { id: Service; name: string; icon: React.ReactNode; glow: string; t
   { id: 'opensearch', name: 'OpenSearch', glow: '#00e5ff', icon: <Search className="w-5 h-5 text-[#00e5ff]" />, text: 'Typo-tolerant fuzzy product search, kept in sync with stock by Kafka consumers.' },
 ];
 
-export const AboutModal: React.FC<AboutModalProps> = ({ isOpen, onClose, initialLedger }) => {
+export const AboutModal: React.FC<AboutModalProps> = ({ isOpen, onClose, initialLedger, onOpenTour }) => {
   const [ledger, setLedger] = useState<Service | null>(null);
   // Voice: "Show Kafka ledger" opens About straight onto that ledger.
   useEffect(() => { if (isOpen && initialLedger) setLedger(initialLedger); }, [isOpen, initialLedger]);
@@ -135,7 +136,18 @@ export const AboutModal: React.FC<AboutModalProps> = ({ isOpen, onClose, initial
             <ExternalLink className="w-4 h-4 shrink-0" />
           </a>
 
-          <div className="text-center pt-2">
+          <div className="flex items-center justify-center gap-3 pt-2">
+            {onOpenTour && (
+              <button
+                onClick={() => {
+                  onClose();
+                  onOpenTour();
+                }}
+                className="bg-[#f0e5d8] text-[#1a1918] px-5 py-2.5 rounded-full font-mono text-xs font-black uppercase tracking-wider hover:bg-[#a7f432] transition-colors border-2 border-[#1a1918] shadow-pop"
+              >
+                START GUIDE 🧭
+              </button>
+            )}
             <button
               onClick={onClose}
               className="bg-[#1a1918] text-white px-6 py-2.5 rounded-full font-mono text-xs font-black uppercase tracking-wider hover:bg-[#ff5c35] transition-colors shadow-pop"

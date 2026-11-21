@@ -68,7 +68,7 @@ export const WebGLScene: React.FC<WebGLSceneProps> = ({
     camera.position.set(0, 0, 3);
     const scene = new THREE.Scene();
     const group = new THREE.Group();
-    group.position.y = 0.05;
+    group.position.y = -0.16;
     scene.add(group);
 
     const geometry = new THREE.PlaneGeometry(1, 1, 40, 40);

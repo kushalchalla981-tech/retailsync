@@ -337,6 +337,10 @@ export const PlatformDashboard: React.FC<PlatformDashboardProps> = ({ onBackToHo
                 <CustomizeStore
                   store={activeStore}
                   onStoreUpdated={() => setStores([...storeManager.getStoresForUser(me, isPlatformOwner)])}
+                  onStoreDeleted={() => {
+                    setStores([...storeManager.getStoresForUser(me, isPlatformOwner)]);
+                    onBackToHome();
+                  }}
                 />
               )}
 

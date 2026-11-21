@@ -5,6 +5,7 @@ import { ExtendedStore, storeManager } from '../../data/storeManager';
 interface CustomizeStoreProps {
   store: ExtendedStore;
   onStoreUpdated: () => void;
+  onStoreDeleted?: () => void;
 }
 
 const THEME_PRESETS = [
@@ -15,7 +16,7 @@ const THEME_PRESETS = [
   { name: 'Obsidian', primary: '#1a1918', accent: '#ff5c35', desc: 'Minimal monolithic charcoal with bold signal orange' },
 ];
 
-export const CustomizeStore: React.FC<CustomizeStoreProps> = ({ store, onStoreUpdated }) => {
+export const CustomizeStore: React.FC<CustomizeStoreProps> = ({ store, onStoreUpdated, onStoreDeleted }) => {
   const [storeName, setStoreName] = useState(store.name);
   const [tagline, setTagline] = useState(store.tagline);
   const [description, setDescription] = useState(store.description);
@@ -56,7 +57,11 @@ export const CustomizeStore: React.FC<CustomizeStoreProps> = ({ store, onStoreUp
   const handleDeleteStore = () => {
     if (confirm(`CRITICAL: Are you sure you want to permanently delete store "${store.name}"? This removes all associated products and orders from the platform.`)) {
       storeManager.deleteStore(store.id);
-      onStoreUpdated();
+      if (onStoreDeleted) {
+        onStoreDeleted();
+      } else {
+        onStoreUpdated();
+      }
     }
   };
 

@@ -1,7 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { Sparkles, Send, Bot, User, Zap, Database, Search, Trash2, Mic, Square } from 'lucide-react';
 import { recordUtterance, NoSpeechError } from '../../voice/recorder';
-import { speak, transcribe, type Speech } from '../../voice/api';
+import { speak, transcribe, askGemma, type Speech } from '../../voice/api';
 import { ExtendedStore, STOCK_BASELINE, STOCK_TOPLINE, storeManager } from '../../data/storeManager';
 import { answer } from '../../utils/assistantBrain';
 import { recentTelemetry } from '../../utils/telemetry';
@@ -115,25 +115,49 @@ export const AIAssistant: React.FC<AIAssistantProps> = ({ store }) => {
     if (!textToSend) setInputText('');
     setIsTyping(true);
 
-    window.setTimeout(() => {
-      const reply = answer(text, {
-        storeName: store.name,
-        category: store.category,
-        tagline: store.tagline,
-        catalog: store.catalog,
-        orders: storeManager.getOrders().filter(o => o.storeId === store.id),
-        telemetry: recentTelemetry(),
-        baseline: STOCK_BASELINE,
-        topline: STOCK_TOPLINE,
-      });
-      setMessages(prev => [...prev, { id: `ai-${Date.now()}`, sender: 'ai', text: reply.text, time: stamp(), dataBadge: reply.badge }]);
+    void (async () => {
+      let replyText: string | null = null;
+      let badge = 'Gemma 3:4B · Local LLM';
+
+      // 1. Try local Gemma 3:4B via backend first
+      try {
+        const gemma = await askGemma(text, {
+          storeName: store.name,
+          category: store.category,
+          catalog: store.catalog.map(p => ({ name: p.name, price: p.price, stock: p.stock })),
+          ordersCount: storeManager.getOrders().filter(o => o.storeId === store.id).length,
+        });
+        if (gemma.reply) {
+          replyText = gemma.reply;
+        }
+      } catch {
+        // fall back to deterministic store brain
+      }
+
+      // 2. Fall back to domain-constrained assistantBrain
+      if (!replyText) {
+        const fallback = answer(text, {
+          storeName: store.name,
+          category: store.category,
+          tagline: store.tagline,
+          catalog: store.catalog,
+          orders: storeManager.getOrders().filter(o => o.storeId === store.id),
+          telemetry: recentTelemetry(),
+          baseline: STOCK_BASELINE,
+          topline: STOCK_TOPLINE,
+        });
+        replyText = fallback.text;
+        badge = fallback.badge;
+      }
+
+      setMessages(prev => [...prev, { id: `ai-${Date.now()}`, sender: 'ai', text: replyText!, time: stamp(), dataBadge: badge }]);
       setIsTyping(false);
       if (spoken) {
-        speech.current = speak(reply.text);
+        speech.current = speak(replyText!);
         setSpeaking(true);
         void speech.current.done.then(() => setSpeaking(false));
       }
-    }, 450);
+    })();
   };
 
   return (
@@ -163,6 +187,7 @@ export const AIAssistant: React.FC<AIAssistantProps> = ({ store }) => {
           <span className="hidden lg:flex items-center gap-1"><Database className="w-3.5 h-3.5 text-[#ff5c35]" /> Postgres</span>
           <span className="hidden lg:flex items-center gap-1"><Zap className="w-3.5 h-3.5 text-[#ffd600]" /> Kafka</span>
           <span className="hidden lg:flex items-center gap-1"><Search className="w-3.5 h-3.5 text-[#00e5ff]" /> OpenSearch</span>
+          <span className="hidden lg:flex items-center gap-1 text-[#a7f432]"><Sparkles className="w-3.5 h-3.5 text-[#a7f432]" /> Gemma 3:4B</span>
           <div className="relative">
             <button
               type="button"

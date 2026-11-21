@@ -21,7 +21,7 @@ export type VoiceStatus = 'sleeping' | 'listening' | 'processing' | 'speaking';
 export interface VoiceAgentOptions {
   stores: () => { id: string; name: string }[];
   /** Runs the action; may return a reply that replaces the server's (e.g. an AI answer). */
-  execute: (action: VoiceAction) => string | null | undefined;
+  execute: (action: VoiceAction) => string | null | undefined | Promise<string | null | undefined>;
 }
 
 interface Recognition {
@@ -98,7 +98,7 @@ export function useVoiceAgent({ stores, execute }: VoiceAgentOptions) {
     lastActive.current = Date.now();
     if (action.type === 'SLEEP') return sleep(serverReply ?? 'Going to sleep.');
     if (action.type === 'STOP') return;
-    const answer = latest.current.execute(action) ?? serverReply;
+    const answer = (await latest.current.execute(action)) ?? serverReply;
     if (answer && !signal.aborted) await say(answer);
   }, [say, sleep]);
 

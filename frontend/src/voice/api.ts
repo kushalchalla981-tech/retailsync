@@ -16,6 +16,24 @@ export async function classify(transcript: string, stores: { id: string; name: s
   return res.json();
 }
 
+export async function askGemma(
+  query: string,
+  context?: { storeName?: string; category?: string; catalog?: Array<{ name: string; price: string; stock: number }>; ordersCount?: number }
+): Promise<{ reply: string | null; model: string }> {
+  try {
+    const res = await fetch(`${API_BASE}/api/voice/gemma`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ query, context }),
+    });
+    if (!res.ok) return { reply: null, model: 'none' };
+    const data = await res.json();
+    return { reply: data.reply ?? null, model: data.model ?? 'none' };
+  } catch {
+    return { reply: null, model: 'none' };
+  }
+}
+
 export interface Speech { done: Promise<void>; stop: () => void }
 
 /** Speak with Gnani Timbre; fall back to the browser voice if the server can't. */

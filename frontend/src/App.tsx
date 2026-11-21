@@ -7,7 +7,8 @@ import { Preloader } from './components/Preloader';
 import { TransitionBlocks, TransitionApi } from './components/TransitionBlocks';
 import { StoreDetailModal } from './components/StoreDetailModal';
 import { AboutModal } from './components/AboutModal';
-import { BottomHUD } from './components/BottomHUD';
+import { TopStoreControls } from './components/TopStoreControls';
+import { StartGuideModal } from './components/StartGuideModal';
 import { FlatStoreCarousel } from './components/FlatStoreCarousel';
 import { PlatformDashboard } from './components/dashboard/PlatformDashboard';
 import { sound } from './utils/sound';
@@ -21,6 +22,7 @@ import { CreateStoreModal } from './components/dashboard/CreateStoreModal';
 import { VoiceAgentOrb } from './components/voice/VoiceAgentOrb';
 import { useVoiceAgent } from './hooks/useVoiceAgent';
 import { emitCreateInput, type LedgerService, type VoiceAction } from './voice/types';
+import { askGemma } from './voice/api';
 import { answer } from './utils/assistantBrain';
 import { recentTelemetry } from './utils/telemetry';
 import { STOCK_BASELINE, STOCK_TOPLINE } from './data/storeManager';
@@ -39,6 +41,7 @@ export const App: React.FC = () => {
   const [webglOk, setWebglOk] = useState(true);
   const [profileOpen, setProfileOpen] = useState(false);
   const [creatorOpen, setCreatorOpen] = useState(false);
+  const [guideOpen, setGuideOpen] = useState(false);
   const { role } = useRole();
   const clerk = useClerk();
   const { getToken, isSignedIn } = useAuth();
@@ -61,7 +64,7 @@ export const App: React.FC = () => {
 
   // The carousel listens to wheel/drag on the whole window; freeze it whenever anything sits on top of it,
   // otherwise it swallows scrolling inside the store wizard, cart, search, profile and store pages.
-  const overlayOpen = Boolean(selected || aboutOpen || searchOpen || profileOpen || creatorOpen || cartOpen);
+  const overlayOpen = Boolean(selected || aboutOpen || searchOpen || profileOpen || creatorOpen || cartOpen || guideOpen);
   useEffect(() => { scene.current?.setLocked(overlayOpen); }, [overlayOpen]);
 
   // Subscribe to reactive storeManager so new stores created in the dashboard reflect immediately on the homepage
@@ -118,6 +121,7 @@ export const App: React.FC = () => {
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if (e.key !== 'Escape') return;
+      if (guideOpen) { setGuideOpen(false); return; }
       if (creatorOpen) { setCreatorOpen(false); return; }
       if (aboutOpen) { setAboutOpen(false); return; }
       if (profileOpen) { setProfileOpen(false); return; }
@@ -126,7 +130,7 @@ export const App: React.FC = () => {
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
-  }, [creatorOpen, aboutOpen, profileOpen, searchOpen, selected, close]);
+  }, [guideOpen, creatorOpen, aboutOpen, profileOpen, searchOpen, selected, close]);
 
   /** Owner -> platform dashboard, creator -> store dashboard, visitor -> profile, signed out -> sign in. */
   const openProfile = useCallback(() => {
@@ -140,7 +144,7 @@ export const App: React.FC = () => {
   }, []);
 
   /** Voice agent (v1.06): turn each classified action into the same UI change a click would make. */
-  const executeVoice = (a: VoiceAction): string | null | undefined => {
+  const executeVoice = async (a: VoiceAction): Promise<string | null | undefined> => {
     // Navigation targets the showcase; leave the dashboard first.
     const leaveDashboard = dashboardOpen && a.type !== 'CLOSE_OVERLAY' && a.type !== 'AI_QUERY';
     if (leaveDashboard) setDashboardOpen(false);
@@ -148,7 +152,7 @@ export const App: React.FC = () => {
       case 'NAVIGATE_STORE': {
         const i = stores.findIndex((s) => s.id === a.storeId);
         if (i < 0) return "I couldn't find that store.";
-        setSearchOpen(false); setAboutOpen(false); setProfileOpen(false); setCartOpen(false);
+        setSearchOpen(false); setAboutOpen(false); setProfileOpen(false); setCartOpen(false); setGuideOpen(false);
         setActiveIndex(i);
         scene.current?.goTo(i);
         if (selected) navigate(i); else open(i);
@@ -177,6 +181,7 @@ export const App: React.FC = () => {
         return undefined;
       case 'CLOSE_OVERLAY': {
         if (cartOpen) { setCartOpen(false); return undefined; }
+        if (guideOpen) { setGuideOpen(false); return undefined; }
         if (!(dashboardOpen || selected || aboutOpen || searchOpen || profileOpen || creatorOpen)) return 'Nothing is open.';
         window.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' }));
         return undefined;
@@ -193,7 +198,7 @@ export const App: React.FC = () => {
       case 'AI_QUERY': {
         const current = selected ? stores.find((s) => s.id === selected.member.id) : undefined;
         const scope = current ? [current] : stores;
-        return answer(a.query, {
+        const brainCtx = {
           storeName: current?.name ?? 'RetailSync',
           category: current?.category ?? 'multi-store',
           tagline: current?.tagline ?? '',
@@ -202,7 +207,20 @@ export const App: React.FC = () => {
           telemetry: recentTelemetry(),
           baseline: STOCK_BASELINE,
           topline: STOCK_TOPLINE,
-        }).text;
+        };
+        // 1. Try local Gemma 3:4B via backend first
+        try {
+          const gemma = await askGemma(a.query, {
+            storeName: brainCtx.storeName,
+            category: brainCtx.category,
+            catalog: brainCtx.catalog.map((p) => ({ name: p.name, price: p.price, stock: p.stock })),
+            ordersCount: brainCtx.orders.length,
+          });
+          if (gemma.reply) return gemma.reply;
+        } catch {
+          // fallback to deterministic assistantBrain
+        }
+        return answer(a.query, brainCtx).text;
       }
       default:
         return undefined;
@@ -249,6 +267,7 @@ export const App: React.FC = () => {
         onAbout={() => toggleAbout(!aboutOpen)}
         onToggleSound={() => setIsMuted(sound.toggleMute())}
         onSearch={() => setSearchOpen(true)}
+        onGuide={() => setGuideOpen(true)}
         onProfile={openProfile}
       />
       <div className="app-wrapper">
@@ -280,8 +299,8 @@ export const App: React.FC = () => {
         <TransitionBlocks ref={transition} />
       </div>
 
-      {ready && webglOk && !selected && !aboutOpen && !searchOpen && (
-        <BottomHUD
+      {ready && webglOk && !selected && !aboutOpen && !searchOpen && !guideOpen && (
+        <TopStoreControls
           member={activeStore}
           activeIndex={activeIndex}
           totalMembers={stores.length}
@@ -307,8 +326,33 @@ export const App: React.FC = () => {
         onClose={close}
         onNavigate={navigate}
       />
-      <AboutModal isOpen={aboutOpen} initialLedger={aboutLedger} onClose={() => { toggleAbout(false); setAboutLedger(null); }} />
+      <AboutModal
+        isOpen={aboutOpen}
+        initialLedger={aboutLedger}
+        onOpenTour={() => setGuideOpen(true)}
+        onClose={() => { toggleAbout(false); setAboutLedger(null); }}
+      />
       <UniversalSearchModal isOpen={searchOpen} initialQuery={voiceQuery} onClose={() => { setSearchOpen(false); setVoiceQuery(undefined); }} />
+      <StartGuideModal
+        isOpen={guideOpen}
+        onClose={() => {
+          setGuideOpen(false);
+          try { localStorage.setItem('retailsync_guide_seen', '1'); } catch {}
+        }}
+        onOpenLedger={(service) => {
+          setGuideOpen(false);
+          setAboutLedger(service);
+          setAboutOpen(true);
+        }}
+        onOpenSearch={() => {
+          setGuideOpen(false);
+          setSearchOpen(true);
+        }}
+        onOpenCreator={() => {
+          setGuideOpen(false);
+          setCreatorOpen(true);
+        }}
+      />
       <ProfileModal
         isOpen={profileOpen}
         onClose={() => setProfileOpen(false)}
