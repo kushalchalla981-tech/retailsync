@@ -1,0 +1,17 @@
+{
+  "detector": {
+    "ignoreRules": [],
+    "ignoreFiles": [],
+    "ignoreValues": [
+      {
+        "rule": "side-tab",
+        "value": "*",
+        "files": [
+          "src/components/CartDrawer.tsx"
+        ],
+        "createdAt": "2026-11-21T18:08:17.432Z",
+        "reason": "Claude decided: border-l-4 is the slide-over drawer's edge in the platform's neutral ink (#1a1918), matching the border-4 ink outline used on every card; not a colored side accent on a card"
+      }
+    ]
+  }
+}
