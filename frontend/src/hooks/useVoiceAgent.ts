@@ -122,7 +122,7 @@ export function useVoiceAgent({ stores, execute }: VoiceAgentOptions) {
         if (!mic.current || mic.current.getAudioTracks().every((t) => t.readyState === 'ended')) mic.current = await openMic();
         const wav = await recordUtterance({ onLevel: setLevel, signal: ctrl.signal, waitForSpeechMs: 8000, stream: mic.current });
         setStatus('processing');
-        const text = await transcribe(wav, ctrl.signal);
+        const text = await transcribe(wav, ctrl.signal, latest.current.stores().map((s) => s.name));
         if (ctrl.signal.aborted) continue;
         setError(null);
         await handle(text, ctrl.signal);

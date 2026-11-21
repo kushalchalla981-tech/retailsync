@@ -2,8 +2,9 @@
 import { API_BASE } from '../utils/api';
 import type { CreateDraft, VoiceAction } from './types';
 
-export async function transcribe(wav: Blob, signal?: AbortSignal): Promise<string> {
-  const res = await fetch(`${API_BASE}/api/voice/transcribe`, { method: 'POST', headers: { 'content-type': 'audio/wav' }, body: wav, signal });
+export async function transcribe(wav: Blob, signal?: AbortSignal, hints: string[] = []): Promise<string> {
+  const q = hints.length ? `?hints=${encodeURIComponent(hints.slice(0, 40).join(','))}` : '';
+  const res = await fetch(`${API_BASE}/api/voice/transcribe${q}`, { method: 'POST', headers: { 'content-type': 'audio/wav' }, body: wav, signal });
   const body = await res.json().catch(() => ({}));
   if (!res.ok) throw new Error(body?.error?.message ?? `Transcription failed (${res.status})`);
   return (body.text as string) ?? '';

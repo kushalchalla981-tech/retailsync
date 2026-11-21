@@ -8,7 +8,7 @@ import { rateLimiter } from './voice.js';
 
 const said: string[] = [];
 const speech: SpeechClient = {
-  transcribe: async (audio, mime) => ({ text: `heard ${audio.length} bytes of ${mime}`, language: 'en-IN', latencyMs: 1 }),
+  transcribe: async (audio, mime, keyterms) => ({ text: `heard ${audio.length} bytes of ${mime} hints ${keyterms?.join('|')}`, language: 'en-IN', latencyMs: 1 }),
   synthesize: async (text) => { said.push(text); return Buffer.from('RIFFfake'); },
 };
 const app = () => buildApp({ logLevel: 'silent', db: createFakeDatabase(), verifier: null, speech });
@@ -16,9 +16,9 @@ const app = () => buildApp({ logLevel: 'silent', db: createFakeDatabase(), verif
 describe('voice routes', () => {
   it('transcribes a wav body', async () => {
     const a = app();
-    const res = await a.inject({ method: 'POST', url: '/api/voice/transcribe', headers: { 'content-type': 'audio/wav' }, payload: Buffer.alloc(4000) });
+    const res = await a.inject({ method: 'POST', url: '/api/voice/transcribe?hints=CircuitHub,Peel%20%26%20Pour,%3Cscript%3E', headers: { 'content-type': 'audio/wav' }, payload: Buffer.alloc(4000) });
     assert.equal(res.statusCode, 200);
-    assert.equal(res.json().text, 'heard 4000 bytes of audio/wav');
+    assert.equal(res.json().text, 'heard 4000 bytes of audio/wav hints CircuitHub|Peel & Pour');
     await a.close();
   });
 

@@ -10,6 +10,8 @@ import { AppError } from '../http/contract.js';
 
 const BASE = 'https://api.vachana.ai';
 export const STT_LANGUAGES = 'en-IN,hi-IN';
+/** Words Gnani tends to mishear without a hint ("store" -> "door", PostgreSQL -> "path rescue"). */
+export const COMMAND_TERMS = ['Sync', 'store', 'shop', 'cart', 'sleep', 'dashboard', 'ledger', 'PostgreSQL', 'Kafka', 'OpenSearch', 'Aurora', 'Sunset', 'Forest', 'Midnight', 'Obsidian', 'launch', 'kholo', 'band karo'];
 export const TTS_VOICES = ['Shivani', 'Avinash'] as const;
 export type TtsVoice = (typeof TTS_VOICES)[number];
 
@@ -20,7 +22,8 @@ export interface Transcript {
 }
 
 export interface SpeechClient {
-  transcribe(audio: Buffer, mime: string): Promise<Transcript>;
+  /** `keyterms` bias recognition toward expected words (store names, command vocabulary). */
+  transcribe(audio: Buffer, mime: string, keyterms?: string[]): Promise<Transcript>;
   synthesize(text: string, voice: TtsVoice): Promise<Buffer>;
 }
 
@@ -52,7 +55,7 @@ async function call(url: string, init: () => RequestInit): Promise<Response> {
 }
 
 export const gnaniClient: SpeechClient = {
-  async transcribe(audio, mime) {
+  async transcribe(audio, mime, keyterms = []) {
     const key = apiKey();
     const ext = mime.includes('wav') ? 'wav' : mime.includes('ogg') ? 'ogg' : mime.includes('mpeg') ? 'mp3' : 'bin';
     const started = performance.now();
@@ -61,6 +64,10 @@ export const gnaniClient: SpeechClient = {
       form.append('audio_file', new Blob([new Uint8Array(audio)], { type: mime }), `speech.${ext}`);
       form.append('language_code', STT_LANGUAGES);
       form.append('model', 'prisma-v3.0');
+      // Latin-script output for Hindi/Hinglish too ("Circuit hub kholo"), so commands match one vocabulary.
+      form.append('format', 'transliterate');
+      const terms = [...new Set([...COMMAND_TERMS, ...keyterms])].slice(0, 60);
+      form.append('keyterms', terms.join(','));
       return { method: 'POST', headers: { 'X-API-Key-ID': key }, body: form };
     });
     if (!res.ok) await fail(res, 'Transcription');

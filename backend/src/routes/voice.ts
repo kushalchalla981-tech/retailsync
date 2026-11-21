@@ -57,7 +57,13 @@ export const voiceRoutes: FastifyPluginAsync<{ speech?: SpeechClient }> = async 
     if (!Buffer.isBuffer(audio) || audio.length < 1000) throw new AppError(400, 'VOICE_BAD_AUDIO', 'Send a short audio/wav recording');
     limit(clientKey(request));
     const mime = String(request.headers['content-type'] ?? 'audio/wav').split(';')[0]!;
-    return speech.transcribe(audio, mime);
+    // ?hints=CircuitHub,Threadline: names on screen, so Gnani spells them right.
+    const hints = String((request.query as { hints?: string }).hints ?? '')
+      .split(',')
+      .map((h) => h.trim().slice(0, 40))
+      .filter((h) => /^[\p{L}\p{N} &'.-]+$/u.test(h))
+      .slice(0, 40);
+    return speech.transcribe(audio, mime, hints);
   });
 
   app.post('/voice/synthesize', async (request, reply) => {
