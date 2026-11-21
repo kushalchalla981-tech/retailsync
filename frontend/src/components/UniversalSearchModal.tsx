@@ -43,7 +43,7 @@ function withinOneEdit(a: string, b: string): boolean {
   return edits + (a.length - i) + (b.length - j) <= 1;
 }
 
-export const UniversalSearchModal: React.FC<{ isOpen: boolean; onClose: () => void }> = ({ isOpen, onClose }) => {
+export const UniversalSearchModal: React.FC<{ isOpen: boolean; onClose: () => void; initialQuery?: string }> = ({ isOpen, onClose, initialQuery }) => {
   const { add } = useCart();
   const { format } = useCurrency();
   const [q, setQ] = useState('');
@@ -54,6 +54,8 @@ export const UniversalSearchModal: React.FC<{ isOpen: boolean; onClose: () => vo
   const input = useRef<HTMLInputElement>(null);
 
   useEffect(() => { if (isOpen) setTimeout(() => input.current?.focus(), 30); }, [isOpen]);
+  // Voice: "Search for …" opens the modal with the spoken query.
+  useEffect(() => { if (isOpen && initialQuery) setQ(initialQuery); }, [isOpen, initialQuery]);
 
   useEffect(() => {
     if (!isOpen) return;

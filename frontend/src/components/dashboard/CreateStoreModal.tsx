@@ -2,6 +2,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import { useUser } from '@clerk/react';
 import { X, ArrowRight, ArrowLeft, Sparkles, CheckCircle2 } from 'lucide-react';
 import { ExtendedStore, storeManager } from '../../data/storeManager';
+import { onCreateInput, setCreateDraft } from '../../voice/types';
 import { ThunderLine } from '../ThunderLine';
 
 interface CreateStoreModalProps {
@@ -55,6 +56,52 @@ export const CreateStoreModal: React.FC<CreateStoreModalProps> = ({ isOpen, onCl
   const [primaryColor, setPrimaryColor] = useState('#00e5ff');
   const [accentColor, setAccentColor] = useState('#7b4eff');
 
+  // Hooks must all run before the early return below.
+  const [saving, setSaving] = useState(false);
+  const [saveError, setSaveError] = useState<string | null>(null);
+  // Choices the merchant actually made (the wizard pre-selects defaults); the voice agent asks for the rest.
+  const [touched, setTouched] = useState<{ category?: boolean; theme?: boolean }>({});
+  const submitRef = useRef<() => void>(() => {});
+
+  useEffect(() => {
+    setCreateDraft(isOpen ? { name: name || undefined, category: touched.category ? businessType : undefined, theme: touched.theme ? selectedTheme : undefined } : null);
+  }, [isOpen, name, businessType, selectedTheme, touched]);
+  useEffect(() => () => setCreateDraft(null), []);
+  // Start fresh next time (a voice-built store must not inherit the previous draft).
+  useEffect(() => {
+    if (isOpen) return;
+    setStep(1); setName(''); setSlug(''); setDescription(''); setTouched({}); setSaveError(null);
+  }, [isOpen]);
+
+  // Voice Store Creator: the agent fills the same fields the merchant would.
+  useEffect(() => onCreateInput((a) => {
+    if (a.field === 'name' && a.value) {
+      setName(a.value);
+      setSlug(a.value.toLowerCase().replace(/[^a-z0-9]/g, '-').replace(/-+/g, '-').replace(/^-|-$/g, ''));
+      setStep(1);
+    }
+    const category = a.field === 'category' ? a.value : a.category;
+    if (category) {
+      setBusinessType(category);
+      setTouched((t) => ({ ...t, category: true }));
+      setStep(2);
+    }
+    if (a.field === 'theme') {
+      const t = THEMES.find((x) => x.name === a.value);
+      if (t) {
+        setSelectedTheme(t.name);
+        setPrimaryColor(t.primary);
+        setAccentColor(t.accent);
+        setTouched((x) => ({ ...x, theme: true }));
+        setStep(3);
+      }
+    }
+    if (a.field === 'submit') {
+      setStep(4);
+      submitRef.current();
+    }
+  }), []);
+
   useEffect(() => {
     if (!isOpen) return;
     const onKey = (e: KeyboardEvent) => {
@@ -79,9 +126,6 @@ export const CreateStoreModal: React.FC<CreateStoreModalProps> = ({ isOpen, onCl
     setPrimaryColor(t.primary);
     setAccentColor(t.accent);
   };
-
-  const [saving, setSaving] = useState(false);
-  const [saveError, setSaveError] = useState<string | null>(null);
 
   const handleFinalSubmit = async () => {
     setSaving(true);
@@ -145,6 +189,8 @@ export const CreateStoreModal: React.FC<CreateStoreModalProps> = ({ isOpen, onCl
       setSaving(false);
     }
   };
+
+  submitRef.current = () => { if (!saving) void handleFinalSubmit(); };
 
   return (
     <div className="fixed inset-0 z-[105] overflow-y-auto overscroll-contain bg-[#1a1918]/80 backdrop-blur-md flex items-center justify-center p-3 sm:p-6 animate-fadeIn">
@@ -318,7 +364,7 @@ export const CreateStoreModal: React.FC<CreateStoreModalProps> = ({ isOpen, onCl
                   <button
                     type="button"
                     key={bt.id}
-                    onClick={() => setBusinessType(bt.id)}
+                    onClick={() => { setBusinessType(bt.id); setTouched((t) => ({ ...t, category: true })); }}
                     className={`p-3.5 rounded-2xl border-2 text-left transition-all flex items-start gap-3 ${
                       businessType === bt.id
                         ? 'border-[#1a1918] bg-[#1a1918] text-white shadow-pop'
@@ -382,7 +428,7 @@ export const CreateStoreModal: React.FC<CreateStoreModalProps> = ({ isOpen, onCl
                   <button
                     type="button"
                     key={t.name}
-                    onClick={() => handleThemeSelect(t)}
+                    onClick={() => { handleThemeSelect(t); setTouched((x) => ({ ...x, theme: true })); }}
                     className={`w-full p-4 rounded-2xl border-2 text-left flex items-center justify-between transition-all ${
                       selectedTheme === t.name
                         ? 'border-[#1a1918] bg-[#1a1918] text-white shadow-pop'

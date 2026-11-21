@@ -21,6 +21,8 @@ import { paymentRoutes } from './routes/payments.js';
 import { verifierFromEnv, type TokenVerifier } from './http/clerk-auth.js';
 import { searchRoutes } from './routes/search.js';
 import { storefrontStockRoutes } from './routes/storefront-stock.js';
+import { voiceRoutes } from './routes/voice.js';
+import type { SpeechClient } from './voice/gnani-client.js';
 import { corsHeaders, telemetryRoutes } from './routes/telemetry.js';
 import { disconnectKafka } from './services/kafka.js';
 import { closeOpenSearch } from './services/opensearch.js';
@@ -40,6 +42,8 @@ export interface BuildAppOptions {
   verifier?: TokenVerifier | null;
   /** Storefront checkout / stock events; production injects the Kafka publisher. */
   storefrontEvents?: StorefrontEventSink;
+  /** Gnani speech client; tests inject a fake. */
+  speech?: SpeechClient;
 }
 
 export function buildApp(options: BuildAppOptions): FastifyInstance {
@@ -75,6 +79,7 @@ export function buildApp(options: BuildAppOptions): FastifyInstance {
   app.register(paymentRoutes, { prefix: '/api', db, events: storefrontEvents });
   app.register(merchantStoreRoutes, { prefix: '/api', db, verifier });
   app.register(storefrontStockRoutes, { prefix: '/api', db, verifier, events: storefrontEvents });
+  app.register(voiceRoutes, { prefix: '/api', speech: options.speech });
   app.register(searchRoutes, { prefix: '/api' });
   app.register(telemetryRoutes, { prefix: '/api' });
 

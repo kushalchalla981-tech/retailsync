@@ -11,6 +11,8 @@ const COMMIT = __COMMIT_SHA__;
 interface AboutModalProps {
   isOpen: boolean;
   onClose: () => void;
+  /** Opens this service's ledger when About opens (voice). */
+  initialLedger?: Service | null;
 }
 
 const CARDS: { id: Service; name: string; icon: React.ReactNode; glow: string; text: React.ReactNode }[] = [
@@ -19,8 +21,11 @@ const CARDS: { id: Service; name: string; icon: React.ReactNode; glow: string; t
   { id: 'opensearch', name: 'OpenSearch', glow: '#00e5ff', icon: <Search className="w-5 h-5 text-[#00e5ff]" />, text: 'Typo-tolerant fuzzy product search, kept in sync with stock by Kafka consumers.' },
 ];
 
-export const AboutModal: React.FC<AboutModalProps> = ({ isOpen, onClose }) => {
+export const AboutModal: React.FC<AboutModalProps> = ({ isOpen, onClose, initialLedger }) => {
   const [ledger, setLedger] = useState<Service | null>(null);
+  // Voice: "Show Kafka ledger" opens About straight onto that ledger.
+  useEffect(() => { if (isOpen && initialLedger) setLedger(initialLedger); }, [isOpen, initialLedger]);
+  useEffect(() => { if (!isOpen) setLedger(null); }, [isOpen]);
 
   useEffect(() => {
     if (!isOpen || ledger !== null) return;

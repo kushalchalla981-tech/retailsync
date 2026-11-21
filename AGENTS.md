@@ -26,7 +26,16 @@ Only drill into specific files/directories after using graphify to identify the 
 
 ---
 
-## Version 1.05 Active Scope & Rules
+## Version 1.06 Active Scope & Rules: Gnani Voice Agent
+
+Refer to `V1_06_PLAN.md`. Implementation map:
+- Backend: `backend/src/voice/gnani-client.ts` (Prisma v3.0 STT, Timbre v3.0 TTS, key from `GNANI_API_KEY`, never sent to the browser), `backend/src/voice/intent.ts` (pure transcript -> action classifier), `backend/src/routes/voice.ts` (`/api/voice/transcribe|synthesize|action`, rate limited per client and globally).
+- Frontend: `src/hooks/useVoiceAgent.ts` (state machine, wake phrase via browser recognizer when hands-free is on), `src/voice/recorder.ts` (16 kHz WAV with end-of-speech detection), `src/voice/api.ts`, `src/components/voice/VoiceAgentOrb.tsx`; App's `executeVoice` maps actions to UI; the store wizard listens via `onCreateInput`.
+- The Gnani key lives only in Render env / local `.env`; never commit it.
+
+---
+
+## Version 1.05 Scope & Rules
 
 Refer to `V1_05_PLAN.md` for full implementation details:
 1. **Customize Scroll Support**: Viewport constraints on dashboard layout (`h-screen overflow-hidden`) with dedicated, fluid scroll support for the customize tab on both desktop and mobile.

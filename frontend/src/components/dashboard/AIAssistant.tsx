@@ -1,5 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { Sparkles, Send, Bot, User, Zap, Database, Search, Trash2 } from 'lucide-react';
+import { Sparkles, Send, Bot, User, Zap, Database, Search, Trash2, Mic, Square } from 'lucide-react';
+import { recordUtterance, NoSpeechError } from '../../voice/recorder';
+import { speak, transcribe, type Speech } from '../../voice/api';
 import { ExtendedStore, STOCK_BASELINE, STOCK_TOPLINE, storeManager } from '../../data/storeManager';
 import { answer } from '../../utils/assistantBrain';
 import { recentTelemetry } from '../../utils/telemetry';
@@ -44,6 +46,14 @@ export const AIAssistant: React.FC<AIAssistantProps> = ({ store }) => {
   const [isTyping, setIsTyping] = useState(false);
   const [confirmClear, setConfirmClear] = useState(false);
   const scroller = useRef<HTMLDivElement>(null);
+  // Voice (v1.06): dictate with Gnani Prisma, hear answers in Gnani Timbre.
+  const [mic, setMic] = useState<'idle' | 'listening' | 'transcribing'>('idle');
+  const [micError, setMicError] = useState<string | null>(null);
+  const [speaking, setSpeaking] = useState(false);
+  const micAbort = useRef<AbortController | null>(null);
+  const speech = useRef<Speech | null>(null);
+  const stopSpeaking = () => { speech.current?.stop(); speech.current = null; setSpeaking(false); };
+  useEffect(() => () => { micAbort.current?.abort(); speech.current?.stop(); }, []);
   const loadedFor = useRef(store.id);
 
   // Switching stores loads that store's own history.
@@ -74,7 +84,30 @@ export const AIAssistant: React.FC<AIAssistantProps> = ({ store }) => {
     setMessages([greeting(store)]);
   };
 
-  const handleSendMessage = (textToSend?: string) => {
+  const dictate = async () => {
+    if (mic !== 'idle') { micAbort.current?.abort(); return; }
+    stopSpeaking();
+    setMicError(null);
+    const ctrl = new AbortController();
+    micAbort.current = ctrl;
+    try {
+      setMic('listening');
+      const wav = await recordUtterance({ signal: ctrl.signal });
+      setMic('transcribing');
+      const text = (await transcribe(wav, ctrl.signal)).trim();
+      if (text) handleSendMessage(text, true);
+      else setMicError("Sorry, I didn't catch that.");
+    } catch (e) {
+      if ((e as Error).name !== 'AbortError') {
+        setMicError(e instanceof NoSpeechError ? e.message : (e as Error).name === 'NotAllowedError' ? 'Microphone access is blocked.' : (e as Error).message);
+      }
+    } finally {
+      micAbort.current = null;
+      setMic('idle');
+    }
+  };
+
+  const handleSendMessage = (textToSend?: string, spoken = false) => {
     const text = textToSend || inputText;
     if (!text.trim() || isTyping) return;
 
@@ -95,6 +128,11 @@ export const AIAssistant: React.FC<AIAssistantProps> = ({ store }) => {
       });
       setMessages(prev => [...prev, { id: `ai-${Date.now()}`, sender: 'ai', text: reply.text, time: stamp(), dataBadge: reply.badge }]);
       setIsTyping(false);
+      if (spoken) {
+        speech.current = speak(reply.text);
+        setSpeaking(true);
+        void speech.current.done.then(() => setSpeaking(false));
+      }
     }, 450);
   };
 
@@ -214,10 +252,20 @@ export const AIAssistant: React.FC<AIAssistantProps> = ({ store }) => {
           type="text"
           value={inputText}
           onChange={(e) => setInputText(e.target.value)}
-          placeholder={`Ask about ${store.name}'s prices, stock, orders, marketing or infrastructure…`}
+          placeholder={mic === 'listening' ? 'Listening… ask your question' : mic === 'transcribing' ? 'Transcribing with Gnani…' : `Ask about ${store.name}'s prices, stock, orders, marketing or infrastructure…`}
           aria-label="Ask the store assistant"
           className="flex-1 px-4 py-2.5 bg-[#f4f0ed] border-2 border-[#1a1918] rounded-xl font-mono text-xs text-[#1a1918] focus:outline-none"
         />
+        <button
+          type="button"
+          onClick={speaking ? stopSpeaking : dictate}
+          aria-label={speaking ? 'Stop speaking' : mic === 'idle' ? 'Dictate a question' : 'Stop listening'}
+          aria-pressed={mic !== 'idle'}
+          title={speaking ? 'Stop speaking' : 'Ask by voice (English or Hinglish)'}
+          className={`p-2.5 rounded-xl border-2 border-[#1a1918] shadow-pop transition-all ${mic !== 'idle' || speaking ? 'bg-[#ff5c35] text-white motion-safe:animate-pulse' : 'bg-[#a7f432] text-[#1a1918] hover:bg-[#00e5ff]'}`}
+        >
+          {speaking || mic !== 'idle' ? <Square className="w-4 h-4" /> : <Mic className="w-4 h-4" />}
+        </button>
         <button
           type="submit"
           disabled={!inputText.trim()}
@@ -226,6 +274,7 @@ export const AIAssistant: React.FC<AIAssistantProps> = ({ store }) => {
           <Send className="w-4 h-4" />
         </button>
       </form>
+      {micError && <p role="alert" className="px-4 pb-3 -mt-1 bg-white text-xs font-mono text-[#c0392b]">{micError}</p>}
     </div>
   );
 };

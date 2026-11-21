@@ -18,6 +18,12 @@ import { useCart } from './context/CartContext';
 import { UniversalSearchModal } from './components/UniversalSearchModal';
 import { ProfileModal } from './components/ProfileModal';
 import { CreateStoreModal } from './components/dashboard/CreateStoreModal';
+import { VoiceAgentOrb } from './components/voice/VoiceAgentOrb';
+import { useVoiceAgent } from './hooks/useVoiceAgent';
+import { emitCreateInput, type LedgerService, type VoiceAction } from './voice/types';
+import { answer } from './utils/assistantBrain';
+import { recentTelemetry } from './utils/telemetry';
+import { STOCK_BASELINE, STOCK_TOPLINE } from './data/storeManager';
 
 export const App: React.FC = () => {
   const [fontsReady, setFontsReady] = useState(false);
@@ -45,7 +51,10 @@ export const App: React.FC = () => {
     const email = user.primaryEmailAddress?.emailAddress ?? '';
     void storeManager.migrateLegacyStores({ id: user.id, email });
   }, [isSignedIn, user]);
-  const { isOpen: cartOpen } = useCart();
+  const { isOpen: cartOpen, setOpen: setCartOpen } = useCart();
+  const [voiceQuery, setVoiceQuery] = useState<string | undefined>();
+  const [aboutLedger, setAboutLedger] = useState<LedgerService | null>(null);
+  const voiceCreated = useRef(false);
 
   const scene = useRef<SceneApi | null>(null);
   const transition = useRef<TransitionApi>(null);
@@ -130,14 +139,101 @@ export const App: React.FC = () => {
     setAboutOpen(v);
   }, []);
 
+  /** Voice agent (v1.06): turn each classified action into the same UI change a click would make. */
+  const executeVoice = (a: VoiceAction): string | null | undefined => {
+    // Navigation targets the showcase; leave the dashboard first.
+    const leaveDashboard = dashboardOpen && a.type !== 'CLOSE_OVERLAY' && a.type !== 'AI_QUERY';
+    if (leaveDashboard) setDashboardOpen(false);
+    switch (a.type) {
+      case 'NAVIGATE_STORE': {
+        const i = stores.findIndex((s) => s.id === a.storeId);
+        if (i < 0) return "I couldn't find that store.";
+        setSearchOpen(false); setAboutOpen(false); setProfileOpen(false); setCartOpen(false);
+        setActiveIndex(i);
+        scene.current?.goTo(i);
+        if (selected) navigate(i); else open(i);
+        return undefined;
+      }
+      case 'STEP_STORE': {
+        const base = selected ? selected.index : activeIndex;
+        const i = base + (a.direction === 'next' ? 1 : -1);
+        if (i < 0 || i >= stores.length) return a.direction === 'next' ? "That's the last store." : "That's the first store.";
+        if (selected) navigate(i);
+        else { setActiveIndex(i); scene.current?.goTo(i); sound.playWhoosh(1); }
+        return `${stores[i].name}.`;
+      }
+      case 'OPEN_MODULE':
+        if (a.module === 'cart') setCartOpen(true);
+        else if (a.module === 'search') { setVoiceQuery(a.query); setSearchOpen(true); }
+        else if (a.module === 'about' || a.module === 'ledger') { setAboutLedger(a.module === 'ledger' ? a.service ?? null : null); setAboutOpen(true); }
+        else if (a.module === 'dashboard') {
+          if (role === 'owner' || role === 'creator') setDashboardOpen(true);
+          else if (!isSignedIn) { clerk.openSignIn(); return 'Please sign in first, then I can open your dashboard.'; }
+          else return 'You don\'t have a store yet. Say "create a store" and I\'ll help you build one.';
+        }
+        return undefined;
+      case 'CLOSE_MODULE':
+        setCartOpen(false);
+        return undefined;
+      case 'CLOSE_OVERLAY': {
+        if (cartOpen) { setCartOpen(false); return undefined; }
+        if (!(dashboardOpen || selected || aboutOpen || searchOpen || profileOpen || creatorOpen)) return 'Nothing is open.';
+        window.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' }));
+        return undefined;
+      }
+      case 'CREATE_STORE_INPUT':
+        if (a.field === 'submit') {
+          if (!isSignedIn) { clerk.openSignIn(); return 'Please sign in first, then say "launch it" again.'; }
+          voiceCreated.current = true;
+        }
+        setCreatorOpen(true);
+        // Leaving the dashboard remounts the showcase wizard; give it a tick to start listening.
+        if (leaveDashboard) window.setTimeout(() => emitCreateInput(a), 80); else emitCreateInput(a);
+        return undefined;
+      case 'AI_QUERY': {
+        const current = selected ? stores.find((s) => s.id === selected.member.id) : undefined;
+        const scope = current ? [current] : stores;
+        return answer(a.query, {
+          storeName: current?.name ?? 'RetailSync',
+          category: current?.category ?? 'multi-store',
+          tagline: current?.tagline ?? '',
+          catalog: scope.flatMap((s) => s.catalog),
+          orders: storeManager.getOrders().filter((o) => scope.some((s) => s.id === o.storeId)),
+          telemetry: recentTelemetry(),
+          baseline: STOCK_BASELINE,
+          topline: STOCK_TOPLINE,
+        }).text;
+      }
+      default:
+        return undefined;
+    }
+  };
+  const voice = useVoiceAgent({ stores: () => storeManager.getStores().map((s) => ({ id: s.id, name: s.name })), execute: executeVoice });
+  const orb = (
+    <VoiceAgentOrb
+      status={voice.status}
+      level={voice.level}
+      heard={voice.heard}
+      reply={voice.reply}
+      error={voice.error}
+      handsFree={voice.handsFree}
+      wakeSupported={voice.wakeSupported}
+      onToggleHandsFree={voice.setHandsFree}
+      onActivate={voice.activate}
+    />
+  );
+
   if (dashboardOpen) {
     return (
+      <>
+      {orb}
       <PlatformDashboard
         onBackToHome={() => {
           setDashboardOpen(false);
           setStores([...storeManager.getStores()]);
         }}
       />
+      </>
     );
   }
 
@@ -211,8 +307,8 @@ export const App: React.FC = () => {
         onClose={close}
         onNavigate={navigate}
       />
-      <AboutModal isOpen={aboutOpen} onClose={() => toggleAbout(false)} />
-      <UniversalSearchModal isOpen={searchOpen} onClose={() => setSearchOpen(false)} />
+      <AboutModal isOpen={aboutOpen} initialLedger={aboutLedger} onClose={() => { toggleAbout(false); setAboutLedger(null); }} />
+      <UniversalSearchModal isOpen={searchOpen} initialQuery={voiceQuery} onClose={() => { setSearchOpen(false); setVoiceQuery(undefined); }} />
       <ProfileModal
         isOpen={profileOpen}
         onClose={() => setProfileOpen(false)}
@@ -229,13 +325,21 @@ export const App: React.FC = () => {
       <CreateStoreModal
         isOpen={creatorOpen}
         onClose={() => setCreatorOpen(false)}
-        onStoreCreated={() => {
+        onStoreCreated={(created) => {
           setCreatorOpen(false);
-          setStores([...storeManager.getStores()]);
-          setDashboardOpen(true);
+          const list = storeManager.getStores();
+          setStores([...list]);
+          if (voiceCreated.current) {
+            // Voice launch: show the new card on the showcase instead of jumping to the dashboard.
+            voiceCreated.current = false;
+            const i = list.findIndex((s) => s.id === created.id);
+            if (i >= 0) { setActiveIndex(i); scene.current?.goTo(i); }
+            void voice.say(`${created.name} is live. You'll find it on the showcase.`);
+          } else setDashboardOpen(true);
         }}
       />
       <CartDrawer />
+      {orb}
     </main>
   );
 };
