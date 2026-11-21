@@ -7,6 +7,12 @@ export interface RazorpayOptions {
   storeSlug: string;
   amount: number;        // in paise (₹1 = 100 paise)
   productName: string;
+  /** Line items for the owner's emailed invoice (the server takes the total from Razorpay). */
+  invoice?: {
+    lines: { name: string; storeName: string; qty: number; unitPriceInr: number }[];
+    customerName?: string;
+    customerEmail?: string;
+  };
   onSuccess: (paymentId: string) => void;
   onFailure: (error: unknown) => void;
 }
@@ -56,7 +62,7 @@ export async function openRazorpayCheckout(opts: RazorpayOptions) {
     theme: { color: '#1a1918' },
     handler: async (response: { razorpay_order_id: string; razorpay_payment_id: string; razorpay_signature: string }) => {
       try {
-        const verified = await post<{ paymentId: string }>('verify', response);
+        const verified = await post<{ paymentId: string }>('verify', { ...response, invoice: opts.invoice });
         if (verified.status === 200) opts.onSuccess(verified.data.paymentId);
         else opts.onFailure(verified.data);
       } catch (err) {

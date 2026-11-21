@@ -62,6 +62,8 @@ export const PlatformDashboard: React.FC<PlatformDashboardProps> = ({ onBackToHo
   }, [stores, activeStoreId]);
 
   const activeStore = stores.find(s => s.id === activeStoreId) || stores[0];
+  // Every view is about the selected store: a merchant never sees other stores' orders or revenue.
+  const storeOrders = orders.filter(o => o.storeId === activeStore?.id);
 
   return (
     <div className="min-h-screen bg-[#f4f0ed] text-[#1a1918] flex flex-col font-sans">
@@ -288,9 +290,10 @@ export const PlatformDashboard: React.FC<PlatformDashboardProps> = ({ onBackToHo
               {activeTab === 'dashboard' && (
                 <DashboardOverview
                   store={activeStore}
-                  orders={orders}
+                  orders={storeOrders}
                   allStores={stores}
                   onNavigateTab={setActiveTab}
+                  showPlatformHealth={isPlatformOwner}
                 />
               )}
 
@@ -299,7 +302,7 @@ export const PlatformDashboard: React.FC<PlatformDashboardProps> = ({ onBackToHo
               )}
 
               {activeTab === 'orders' && (
-                <OrdersManagement orders={orders} activeStoreName={activeStore.name} />
+                <OrdersManagement orders={storeOrders} activeStoreName={activeStore.name} />
               )}
 
               {activeTab === 'customize' && (

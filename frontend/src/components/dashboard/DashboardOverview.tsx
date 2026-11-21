@@ -1,5 +1,5 @@
 import React from 'react';
-import { IndianRupee, ShoppingBag, Package, AlertTriangle, Database, Zap, Search, ArrowUpRight } from 'lucide-react';
+import { IndianRupee, ShoppingBag, Package, AlertTriangle, Database, Zap, Search } from 'lucide-react';
 import { ExtendedStore, StoreOrder } from '../../data/storeManager';
 
 interface DashboardOverviewProps {
@@ -7,6 +7,8 @@ interface DashboardOverviewProps {
   orders: StoreOrder[];
   allStores: ExtendedStore[];
   onNavigateTab: (tab: 'products' | 'orders' | 'customize' | 'assistant') => void;
+  /** Platform-only panels (Aiven infrastructure health) are shown to the platform owner only. */
+  showPlatformHealth: boolean;
 }
 
 export const DashboardOverview: React.FC<DashboardOverviewProps> = ({
@@ -14,12 +16,13 @@ export const DashboardOverview: React.FC<DashboardOverviewProps> = ({
   orders,
   allStores,
   onNavigateTab,
+  showPlatformHealth,
 }) => {
   // Compute metrics
   const totalRevenue = orders.reduce((sum, o) => {
     const amt = parseInt(o.total.replace(/[₹,]/g, ''), 10) || 0;
     return sum + amt;
-  }, 148250);
+  }, 0);
 
   const lowStockCount = store.catalog.filter(p => p.stock <= 5).length;
 
@@ -57,12 +60,7 @@ export const DashboardOverview: React.FC<DashboardOverviewProps> = ({
           <div className="text-3xl font-black text-[#1a1918] font-mono">
             ₹{totalRevenue.toLocaleString('en-IN')}
           </div>
-          <div className="flex items-center gap-1.5 mt-2 text-xs font-mono font-bold text-[#1a1918]">
-            <span className="text-[#a7f432] bg-[#1a1918] px-1.5 py-0.5 rounded-md flex items-center">
-              <ArrowUpRight className="w-3.5 h-3.5 inline" /> +14.8%
-            </span>
-            <span className="text-[#786f66]">vs last week</span>
-          </div>
+          <div className="mt-2 text-xs font-mono font-bold text-[#786f66]">This store's paid orders</div>
         </div>
 
         {/* Total Orders */}
@@ -74,14 +72,9 @@ export const DashboardOverview: React.FC<DashboardOverviewProps> = ({
             </div>
           </div>
           <div className="text-3xl font-black text-[#1a1918] font-mono">
-            {orders.length + 34}
+            {orders.length}
           </div>
-          <div className="flex items-center gap-1.5 mt-2 text-xs font-mono font-bold text-[#1a1918]">
-            <span className="text-[#00e5ff] bg-[#1a1918] px-1.5 py-0.5 rounded-md flex items-center">
-              <ArrowUpRight className="w-3.5 h-3.5 inline" /> +8.2%
-            </span>
-            <span className="text-[#786f66]">Razorpay verified</span>
-          </div>
+          <div className="mt-2 text-xs font-mono font-bold text-[#786f66]">Paid via Razorpay</div>
         </div>
 
         {/* Active Products */}
@@ -96,7 +89,7 @@ export const DashboardOverview: React.FC<DashboardOverviewProps> = ({
             {store.catalog.length}
           </div>
           <div className="flex items-center gap-1.5 mt-2 text-xs font-mono font-bold text-[#786f66]">
-            <span>Across {allStores.length} stores</span>
+            <span>{allStores.length > 1 ? `In this store · ${allStores.length} stores total` : 'In this store'}</span>
           </div>
         </div>
 
@@ -117,7 +110,8 @@ export const DashboardOverview: React.FC<DashboardOverviewProps> = ({
         </div>
       </div>
 
-      {/* Live Aiven Infrastructure Health & Telemetry Strip */}
+      {/* Live Aiven Infrastructure Health & Telemetry Strip (platform owner only) */}
+      {showPlatformHealth && (
       <div className="bg-[#1a1918] text-[#fdfaf6] rounded-2xl p-5 border-3 border-[#1a1918] shadow-pop">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4 border-b border-white/10 pb-3">
           <div className="flex items-center gap-2">
@@ -160,6 +154,7 @@ export const DashboardOverview: React.FC<DashboardOverviewProps> = ({
           </div>
         </div>
       </div>
+      )}
 
       {/* Recent Orders Section */}
       <div className="bg-[#fdfaf6] rounded-2xl border-3 border-[#1a1918] shadow-pop overflow-hidden">

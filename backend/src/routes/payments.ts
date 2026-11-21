@@ -13,6 +13,7 @@ import { z } from 'zod';
 
 import { loadDotEnv } from '../config.js';
 import { AppError, parseInput } from '../http/contract.js';
+import { sendInvoiceEmail, type InvoiceSender } from '../services/invoice-email.js';
 
 const RAZORPAY_API = 'https://api.razorpay.com/v1';
 
@@ -48,9 +49,45 @@ const verifyBody = z.object({
   razorpay_order_id: z.string().regex(/^order_[A-Za-z0-9]+$/),
   razorpay_payment_id: z.string().regex(/^pay_[A-Za-z0-9]+$/),
   razorpay_signature: z.string().regex(/^[0-9a-f]{64}$/),
+  /** What the shopper bought, for the owner's invoice. The total on the invoice comes from Razorpay, not from here. */
+  invoice: z
+    .object({
+      lines: z
+        .array(z.object({
+          name: z.string().trim().min(1).max(120),
+          storeName: z.string().trim().min(1).max(80),
+          qty: z.number().int().min(1).max(100),
+          unitPriceInr: z.number().min(0).max(10_000_000),
+        }))
+        .min(1)
+        .max(50),
+      customerName: z.string().trim().max(120).optional(),
+      customerEmail: z.string().trim().email().max(200).optional(),
+    })
+    .optional(),
 });
 
-export const paymentRoutes: FastifyPluginAsync = async (app) => {
+interface RazorpayOrder { id: string; amount: number; amount_paid: number; currency: string }
+
+async function fetchRazorpayOrder(orderId: string, keyId: string, keySecret: string): Promise<RazorpayOrder> {
+  const res = await fetch(`${RAZORPAY_API}/orders/${encodeURIComponent(orderId)}`, {
+    headers: { authorization: `Basic ${Buffer.from(`${keyId}:${keySecret}`).toString('base64')}` },
+  });
+  if (!res.ok) throw new Error(`Razorpay order lookup failed with ${res.status}`);
+  return (await res.json()) as RazorpayOrder;
+}
+
+export interface PaymentRouteOptions {
+  /** Injected in tests; defaults to Resend. */
+  sendInvoice?: InvoiceSender;
+  /** Injected in tests; defaults to the Razorpay Orders API. */
+  fetchOrder?: typeof fetchRazorpayOrder;
+}
+
+export const paymentRoutes: FastifyPluginAsync<PaymentRouteOptions> = async (app, opts) => {
+  const sendInvoice = opts.sendInvoice ?? sendInvoiceEmail;
+  const fetchOrder = opts.fetchOrder ?? fetchRazorpayOrder;
+
   app.post('/payments/razorpay/order', async (request, reply) => {
     const body = parseInput(orderBody, request.body, 'body');
     const { keyId, keySecret } = razorpayKeys();
@@ -79,10 +116,32 @@ export const paymentRoutes: FastifyPluginAsync = async (app) => {
 
   app.post('/payments/razorpay/verify', async (request) => {
     const body = parseInput(verifyBody, request.body, 'body');
-    const { keySecret } = razorpayKeys();
+    const { keyId, keySecret } = razorpayKeys();
     if (!isValidSignature(body.razorpay_order_id, body.razorpay_payment_id, body.razorpay_signature, keySecret)) {
       throw new AppError(400, 'PAYMENT_SIGNATURE_INVALID', 'Payment signature did not match');
     }
-    return { verified: true, orderId: body.razorpay_order_id, paymentId: body.razorpay_payment_id };
+
+    // The invoice never blocks or fails the payment confirmation the shopper is waiting for.
+    let invoice: 'sent' | 'skipped' | 'failed' = 'skipped';
+    if (body.invoice) {
+      try {
+        const order = await fetchOrder(body.razorpay_order_id, keyId, keySecret);
+        invoice = await sendInvoice({
+          orderId: order.id,
+          paymentId: body.razorpay_payment_id,
+          paidPaise: order.amount_paid || order.amount,
+          currency: order.currency,
+          lines: body.invoice.lines,
+          customerName: body.invoice.customerName,
+          customerEmail: body.invoice.customerEmail,
+          issuedAt: new Date(),
+        });
+        if (invoice === 'skipped') request.log.warn('invoice email skipped: RESEND_API_KEY is not set');
+      } catch (err) {
+        invoice = 'failed';
+        request.log.error({ err }, 'invoice email failed');
+      }
+    }
+    return { verified: true, orderId: body.razorpay_order_id, paymentId: body.razorpay_payment_id, invoice };
   });
 };

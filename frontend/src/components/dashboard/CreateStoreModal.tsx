@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { useUser } from '@clerk/react';
 import { X, ArrowRight, ArrowLeft, Sparkles, CheckCircle2 } from 'lucide-react';
 import { ExtendedStore, storeManager } from '../../data/storeManager';
@@ -33,6 +33,9 @@ export const CreateStoreModal: React.FC<CreateStoreModalProps> = ({ isOpen, onCl
   const userEmail = user?.primaryEmailAddress?.emailAddress?.toLowerCase() || '';
   const userName = user?.fullName || userEmail.split('@')[0] || 'Merchant';
   const [step, setStep] = useState(1);
+  const body = useRef<HTMLDivElement>(null);
+  // Each step starts at its top instead of inheriting the previous step's scroll position.
+  useEffect(() => { body.current?.scrollTo({ top: 0, behavior: 'smooth' }); }, [step]);
 
   // Step 1: Store Information
   const [name, setName] = useState('');
@@ -121,7 +124,7 @@ export const CreateStoreModal: React.FC<CreateStoreModalProps> = ({ isOpen, onCl
   };
 
   return (
-    <div className="fixed inset-0 z-50 overflow-y-auto bg-[#1a1918]/80 backdrop-blur-md flex items-center justify-center p-3 sm:p-6 animate-fadeIn">
+    <div className="fixed inset-0 z-[105] overflow-y-auto overscroll-contain bg-[#1a1918]/80 backdrop-blur-md flex items-center justify-center p-3 sm:p-6 animate-fadeIn">
       <div className="fixed inset-0 -z-10" onClick={onClose} />
       <div
         className="relative w-full max-w-2xl bg-[#fdfaf6] border-4 border-[#1a1918] rounded-3xl shadow-pop-lg overflow-hidden my-auto max-h-[92vh] flex flex-col"
@@ -164,7 +167,7 @@ export const CreateStoreModal: React.FC<CreateStoreModalProps> = ({ isOpen, onCl
         </div>
 
         {/* Body content */}
-        <div className="overflow-y-auto p-6 space-y-6">
+        <div ref={body} className="overflow-y-auto overscroll-contain scroll-smooth p-6 space-y-6">
           {/* STEP 1: Store Information */}
           {step === 1 && (
             <div className="space-y-4 animate-fadeIn">

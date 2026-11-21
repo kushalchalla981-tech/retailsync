@@ -66,6 +66,11 @@ export const CartDrawer: React.FC = () => {
       storeSlug: stores.length === 1 ? stores[0] : 'multi-store',
       amount: totalInr * 100,
       productName: `${count} item${count === 1 ? '' : 's'} from ${stores.length} store${stores.length === 1 ? '' : 's'}`,
+      invoice: {
+        lines: paid.map((i) => ({ name: i.name, storeName: i.storeName, qty: i.qty, unitPriceInr: i.priceInr })),
+        customerName: user?.fullName || undefined,
+        customerEmail: user?.primaryEmailAddress?.emailAddress || undefined,
+      },
       onSuccess: (id) => {
         recordOrders(paid, id);
         setPaymentId(id);

@@ -3,7 +3,6 @@ import { DEMO_STORES, DemoStore } from './data/stores';
 import { ExtendedStore, storeManager } from './data/storeManager';
 import { WebGLScene, SceneApi } from './components/WebGLScene';
 import { Header } from './components/Header';
-import { WorkNames, WorkNamesApi } from './components/WorkNames';
 import { Preloader } from './components/Preloader';
 import { TransitionBlocks, TransitionApi } from './components/TransitionBlocks';
 import { StoreDetailModal } from './components/StoreDetailModal';
@@ -15,6 +14,7 @@ import { sound } from './utils/sound';
 import { useClerk } from '@clerk/react';
 import { useRole } from './utils/roles';
 import { CartDrawer } from './components/CartDrawer';
+import { useCart } from './context/CartContext';
 import { UniversalSearchModal } from './components/UniversalSearchModal';
 import { ProfileModal } from './components/ProfileModal';
 import { CreateStoreModal } from './components/dashboard/CreateStoreModal';
@@ -35,10 +35,15 @@ export const App: React.FC = () => {
   const [creatorOpen, setCreatorOpen] = useState(false);
   const { role } = useRole();
   const clerk = useClerk();
+  const { isOpen: cartOpen } = useCart();
 
   const scene = useRef<SceneApi | null>(null);
-  const names = useRef<WorkNamesApi>(null);
   const transition = useRef<TransitionApi>(null);
+
+  // The carousel listens to wheel/drag on the whole window; freeze it whenever anything sits on top of it,
+  // otherwise it swallows scrolling inside the store wizard, cart, search, profile and store pages.
+  const overlayOpen = Boolean(selected || aboutOpen || searchOpen || profileOpen || creatorOpen || cartOpen);
+  useEffect(() => { scene.current?.setLocked(overlayOpen); }, [overlayOpen]);
 
   // Subscribe to reactive storeManager so new stores created in the dashboard reflect immediately on the homepage
   useEffect(() => {
@@ -59,15 +64,12 @@ export const App: React.FC = () => {
     const storeList = storeManager.getStores();
     transition.current?.play(() => {
       setSelected({ member: storeList[index] || storeList[0], index });
-      names.current?.hide();
-      scene.current?.setLocked(true);
     });
   }, []);
 
   const close = useCallback(() => {
     transition.current?.play(() => {
       setSelected(null);
-      scene.current?.setLocked(false);
     });
   }, []);
 
@@ -102,8 +104,6 @@ export const App: React.FC = () => {
 
   const toggleAbout = useCallback((v: boolean) => {
     setAboutOpen(v);
-    scene.current?.setLocked(v);
-    if (v) names.current?.hide();
   }, []);
 
   if (dashboardOpen) {
@@ -139,12 +139,9 @@ export const App: React.FC = () => {
             apiRef={scene}
             stores={stores}
             onProgress={setProgress}
-            onShowName={(i) => {
-              setActiveIndex(i);
-              names.current?.show(i);
-            }}
-            onHideName={() => names.current?.hide()}
-            onNameHover={(h) => (h ? names.current?.enter() : names.current?.leave())}
+            onShowName={setActiveIndex}
+            onHideName={() => {}}
+            onNameHover={() => {}}
             onSelect={open}
             onUnsupported={() => { setWebglOk(false); setProgress(1); }}
           />
@@ -159,7 +156,6 @@ export const App: React.FC = () => {
               </div>
             ))}
           </div>
-          <WorkNames ref={names} stores={stores} onOpen={open} />
         </div>
         <TransitionBlocks ref={transition} />
       </div>

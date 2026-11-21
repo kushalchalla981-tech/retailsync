@@ -52,19 +52,6 @@ export const Header: React.FC<HeaderProps> = ({ visible, aboutOpen, isMuted, onH
         <kbd className="hidden md:inline text-[10px] opacity-60">{isMac ? '⌘K' : 'Ctrl K'}</kbd>
       </button>
       <nav className="flex items-center flex-nowrap">
-        {/* Quick Dashboard shortcut for owner / creator */}
-        {role === 'owner' && (
-          <button onClick={onProfile} className={`${pill} bg-[#a7f432] text-[#1a1918] mr-2`} aria-label="Platform Dashboard">
-            <Crown className="w-3.5 h-3.5 text-[#1a1918]" />
-            <span className="hidden md:inline">Dashboard</span>
-          </button>
-        )}
-        {role === 'creator' && (
-          <button onClick={onProfile} className={`${pill} bg-[#ffd600] text-[#1a1918] mr-2`} aria-label="Store Dashboard">
-            <Store className="w-3.5 h-3.5 text-[#1a1918]" />
-            <span className="hidden md:inline">My Store</span>
-          </button>
-        )}
         <CurrencySelect className="mr-2" />
         {/* Cart appears once something is in it, with a pop. */}
         {count > 0 && (
