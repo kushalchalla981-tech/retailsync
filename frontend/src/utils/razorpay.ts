@@ -1,3 +1,5 @@
+import { API_BASE as API } from './api';
+
 declare const Razorpay: any;
 
 export interface RazorpayOptions {
@@ -9,7 +11,6 @@ export interface RazorpayOptions {
   onFailure: (error: unknown) => void;
 }
 
-const API = import.meta.env.VITE_API_BASE ?? '';
 
 async function post<T>(path: string, body: unknown): Promise<{ status: number; data: T }> {
   const res = await fetch(`${API}/api/payments/razorpay/${path}`, {

@@ -1,5 +1,13 @@
 import { defineConfig, loadEnv } from 'vite';
 import react from '@vitejs/plugin-react';
+import { execSync } from 'node:child_process';
+
+/** Commit being built: Vercel/Render provide it; fall back to local git. */
+function commitSha(): string {
+  const fromHost = process.env.VERCEL_GIT_COMMIT_SHA || process.env.RENDER_GIT_COMMIT;
+  if (fromHost) return fromHost;
+  try { return execSync('git rev-parse HEAD', { stdio: ['ignore', 'pipe', 'ignore'] }).toString().trim(); } catch { return ''; }
+}
 
 export default defineConfig(({ command, mode }) => {
   // A build without a real Clerk key ships a site where sign-in silently never works.
@@ -12,6 +20,7 @@ export default defineConfig(({ command, mode }) => {
 
   return {
     plugins: [react()],
+    define: { __COMMIT_SHA__: JSON.stringify(commitSha()) },
     server: {
       port: 5174,
       host: true,

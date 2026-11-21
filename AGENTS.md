@@ -5,21 +5,19 @@ This project has many files (frontend/backend/docs/assets). **Do not** do a broa
 
 ### Preferred workflow (next time you continue this project)
 1. **Use Graphify first** to build/refresh understanding of the codebase:
-   - If `graphify-out/` exists, query it (graphify skill/tools) before manually exploring.
-   - If missing/stale, consider running graphify to generate a knowledge graph, then query it.
+   - CLI: `/home/kush/.local/bin/graphify` (Skill in `~/.gemini/config/skills/graphify/SKILL.md`).
+   - If `graphify-out/` exists, query it (`graphify path`, `graphify explain`) before manually exploring.
+   - If missing/stale, run `graphify update .` to refresh the knowledge graph.
    - Treat graphify queries as the default way to answer "how does X work?", "where is Y?", "what depends on Z?".
 2. **Use Caveman (context compression)** when you need to ingest large outputs:
+   - Binary: `/home/kush/.caveman/bin/caveman-mcp` (Configured in `~/.gemini/config/mcp_config.json`).
    - Use `caveman_compress` for large text/tool outputs before reasoning over them.
    - Use `caveman_toon_encode`/`decode` for uniform/tabular JSON payloads when helpful.
    - Goal: keep context small; avoid pasting huge raw logs/dumps into the conversation.
 
-### Why
-- The repo contains PDFs, docs, built assets, node_modules references, and multiple frontends/backends. Blind full reads waste context and time.
-- Graphify provides a persistent knowledge graph (`graphify-out/`) to navigate relationships quickly.
-- Caveman tools reduce token bloat from large outputs.
-
 ### Quick pointers
-- Key docs: `RESEARCH.md`, `PRODUCT.md`, `execution_plan.md`, `DESIGN.md`, `VISION.md`, `change_questions.md`
+- Key docs: `V1_01_PLAN.md` (Active Roadmap), `RESEARCH.md`, `PRODUCT.md`, `execution_plan.md`, `DESIGN.md`, `VISION.md`, `change_questions.md`
+- Project Repo: `https://github.com/kushalchalla981-tech/retailsync.git`
 - Hackathon briefs: `*.pdf` (use targeted extraction, not full manual re-reading unless necessary)
 - Graph output: `graphify-out/` (if present)
 
@@ -28,14 +26,30 @@ Only drill into specific files/directories after using graphify to identify the 
 
 ---
 
+## Version 1.01 Active Scope & Rules
+
+Refer to `V1_01_PLAN.md` for full implementation details:
+1. **Universal Search**: OpenSearch fuzzy search across store catalogs + external e-commerce price comparison (Amazon, Flipkart), sorted **ascending by cost**.
+2. **Multi-Currency Support**: INR base + 8 additional currencies (USD, EUR, GBP, JPY, CAD, AUD, SGD, AED) with real-time conversion across the whole app.
+3. **Store Title Alignment**: Clean up 3D card textures and eliminate duplicate lowercase subtitles (`title2`) from `WorkNames.tsx` (resolving Image 0 clutter).
+4. **Full-Page Storefront**: Expand `StoreDetailModal` to full-page, place "[WHAT MAKES US DIFFERENT]" directly below the store name, expand catalog (6-8 items per store) with real product images and quantity steppers (resolving Image 1 redesign).
+5. **Global Cart System**: Slide-over cart drawer with persistent items, quantity modifiers, currency-aware totals, and direct Razorpay checkout.
+6. **Profile Click Routing & RBAC**:
+   - **Platform Owner (`kushalchalla981@gmail.com`)**: Accesses full administrative **Platform Dashboard**.
+   - **Shop Creator (non-owner merchant)**: Accesses Store Creator wizard to create/manage storefronts.
+   - **Visitor**: View profile, order history, active currency, or sign up as a creator.
+7. **Repository Transparency**: Official GitHub link (`https://github.com/kushalchalla981-tech/retailsync.git`) displayed in the About modal.
+
+---
+
 ## Platform Architecture & Role Separation
 
 ### 1. Platform Owner Enforcement
 - **Platform Owner Identity**: Exclusively fixed to **`kushalchalla981@gmail.com`**.
 - **Access Rule**:
-  - No visitor, customer, or other authenticated user is permitted to manage stores, alter catalogs, adjust inventories, customize themes, or delete stores.
-  - Non-owner users who attempt to enter the dashboard route encounter `<AccessDeniedModal />` which explains the single-tenant platform owner restriction.
-  - The "👑 Dashboard" button in `<Header />` is displayed exclusively when `userEmail === 'kushalchalla981@gmail.com'`.
+  - Only the Platform Owner can manage platform-wide stores, alter all catalogs, adjust inventories, customize themes, or delete stores.
+  - Non-owner users who attempt to enter owner routes are cleanly routed to creator/visitor views or `<AccessDeniedModal />`.
+  - The "👑 Dashboard" button in `<Header />` is displayed when `userEmail === 'kushalchalla981@gmail.com'`, or via profile click.
 
 ### 2. Active Storefront & Dashboard (`frontend/`)
 - **Location**: `frontend/`

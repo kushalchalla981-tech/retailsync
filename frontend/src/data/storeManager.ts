@@ -5,6 +5,7 @@ export interface ProductItem {
   name: string;
   price: string;
   emoji: string;
+  image?: string;
   stock: number;
   sku: string;
   category: string;
@@ -40,6 +41,40 @@ export interface ExtendedStore extends DemoStore {
 const STORAGE_KEY_STORES = 'retailsync_custom_stores_v1';
 const STORAGE_KEY_ORDERS = 'retailsync_orders_v1';
 
+const toProducts = (catalog: ProductItem[]) => catalog.map(c => ({ name: c.name, price: c.price, emoji: c.emoji, image: c.image }));
+
+function demoCatalog(s: DemoStore, idx: number): ProductItem[] {
+  return s.products.map((p, pIdx) => ({
+    id: `${s.id}-prod-${pIdx + 1}`,
+    name: p.name,
+    price: p.price,
+    emoji: p.emoji,
+    image: p.image,
+    stock: [18, 4, 32, 2, 12, 45, 9, 27][(idx + pIdx) % 8],
+    sku: `RS-${s.category.slice(0, 3).toUpperCase()}-${100 + pIdx}`,
+    category: s.category,
+    description: `Official genuine item curated by ${s.name}. Zero oversell stock locked in PostgreSQL.`
+  }));
+}
+
+/**
+ * Saved demo stores predate the v1.01 catalog (3 products, no photos). Add the
+ * new demo products and photos while keeping the owner's edits (stock, deletions
+ * of other items, store settings) and any stores they created.
+ */
+function upgradeDemoStores(stores: ExtendedStore[]): ExtendedStore[] {
+  return stores.map(st => {
+    const idx = DEMO_STORES.findIndex(d => d.id === st.id);
+    if (idx < 0) return st;
+    const fresh = demoCatalog(DEMO_STORES[idx], idx);
+    const byName = new Map(fresh.map(f => [f.name, f]));
+    const kept = st.catalog.map(c => ({ ...c, image: c.image ?? byName.get(c.name)?.image }));
+    const have = new Set(kept.map(c => c.name));
+    const catalog = [...kept, ...fresh.filter(f => !have.has(f.name))];
+    return { ...st, catalog, products: toProducts(catalog) };
+  });
+}
+
 function initializeExtendedStores(): ExtendedStore[] {
   return DEMO_STORES.map((s, idx) => ({
     ...s,
@@ -50,16 +85,7 @@ function initializeExtendedStores(): ExtendedStore[] {
     contactEmail: `support@${s.slug}.retailsync.app`,
     contactPhone: '+91 98765 43210',
     contactAddress: 'Bengaluru, Karnataka, India',
-    catalog: s.products.map((p, pIdx) => ({
-      id: `${s.id}-prod-${pIdx + 1}`,
-      name: p.name,
-      price: p.price,
-      emoji: p.emoji,
-      stock: [18, 4, 32, 2, 12, 45][(idx + pIdx) % 6],
-      sku: `RS-${s.category.slice(0, 3).toUpperCase()}-${100 + pIdx}`,
-      category: s.category,
-      description: `Official genuine item curated by ${s.name}. Zero oversell stock locked in PostgreSQL.`
-    }))
+    catalog: demoCatalog(s, idx)
   }));
 }
 
@@ -138,7 +164,7 @@ class StoreManager {
     try {
       const stored = localStorage.getItem(STORAGE_KEY_STORES);
       if (stored) {
-        this.stores = JSON.parse(stored);
+        this.stores = upgradeDemoStores(JSON.parse(stored));
       } else {
         this.stores = initializeExtendedStores();
         this.save();
@@ -216,7 +242,7 @@ class StoreManager {
     const newStore: ExtendedStore = {
       ...storeData,
       id,
-      products: storeData.catalog.map(c => ({ name: c.name, price: c.price, emoji: c.emoji })),
+      products: toProducts(storeData.catalog),
       avatarTheme: {
         primaryColor: storeData.primaryColor,
         accentColor: storeData.accentColor,
@@ -244,7 +270,7 @@ class StoreManager {
       return {
         ...s,
         catalog: updatedCatalog,
-        products: updatedCatalog.map(c => ({ name: c.name, price: c.price, emoji: c.emoji }))
+        products: toProducts(updatedCatalog)
       };
     });
     this.save();
@@ -266,7 +292,7 @@ class StoreManager {
       return {
         ...s,
         catalog: updatedCatalog,
-        products: updatedCatalog.map(c => ({ name: c.name, price: c.price, emoji: c.emoji }))
+        products: toProducts(updatedCatalog)
       };
     });
     this.save();

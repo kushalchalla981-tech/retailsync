@@ -19,6 +19,7 @@ import { CustomizeStore } from './CustomizeStore';
 import { AIAssistant } from './AIAssistant';
 import { CreateStoreModal } from './CreateStoreModal';
 import { AccessDeniedModal } from './AccessDeniedModal';
+import { OWNER_EMAIL } from '../../utils/roles';
 
 interface PlatformDashboardProps {
   onBackToHome: () => void;
@@ -48,9 +49,9 @@ export const PlatformDashboard: React.FC<PlatformDashboardProps> = ({ onBackToHo
     return unsubscribe;
   }, [activeStoreId]);
 
-  // Authorization Check: Platform Owner is fixed to kushalchalla981@gmail.com
+  // Authorization Check: only the platform owner (OWNER_EMAIL) manages stores.
   const userEmail = user?.primaryEmailAddress?.emailAddress?.toLowerCase() || '';
-  const isPlatformOwner = userEmail === 'kushalchalla981@gmail.com';
+  const isPlatformOwner = userEmail === OWNER_EMAIL;
 
   const activeStore = stores.find(s => s.id === activeStoreId) || stores[0];
 

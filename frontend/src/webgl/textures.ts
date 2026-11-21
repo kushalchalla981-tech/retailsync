@@ -59,10 +59,10 @@ export function createPreviewTexture(m: TeamMember, index: number) {
   ctx.restore();
   hill(p.hill3, 260, 'M0 90 C170 20 330 40 440 80 C560 120 700 30 848 60 L848 260 L0 260Z');
 
-  const first = m.name.split(' ')[0].toLowerCase();
-  const size = first.length > 6 ? Math.round((190 * 6) / first.length) : 190;
+  const title = m.name.toLowerCase();
+  const size = title.length > 6 ? Math.round((190 * 6) / title.length) : 190;
   ctx.fillStyle = p.title; ctx.textAlign = 'center'; ctx.textBaseline = 'top';
-  ctx.font = `${size}px Modak`; ctx.fillText(first, W / 2, 96 - size * 0.12);
+  ctx.font = `${size}px Modak`; ctx.fillText(title, W / 2, 96 - size * 0.12);
   ctx.font = '700 26px Inter'; ctx.textAlign = 'left'; ctx.globalAlpha = 0.55; ctx.fillText(String(index + 1).padStart(2, '0'), 44, 40);
   ctx.font = '700 20px Inter'; ctx.textAlign = 'right'; ctx.fillText(m.superpower.name.toLowerCase(), W - 44, 42);
   ctx.globalAlpha = 1; ctx.fillStyle = '#fff'; ctx.textAlign = 'center';

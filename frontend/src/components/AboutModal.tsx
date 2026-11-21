@@ -1,7 +1,10 @@
 import React from 'react';
-import { X, Store, Database, Zap, Search, ShieldCheck } from 'lucide-react';
+import { X, Store, Database, Zap, Search, ShieldCheck, GitBranch, ExternalLink } from 'lucide-react';
 import { ThunderLine } from './ThunderLine';
 import { sound } from '../utils/sound';
+
+const REPO_URL = 'https://github.com/kushalchalla981-tech/retailsync';
+const COMMIT = __COMMIT_SHA__;
 
 interface AboutModalProps {
   isOpen: boolean;
@@ -105,6 +108,22 @@ export const AboutModal: React.FC<AboutModalProps> = ({ isOpen, onClose }) => {
               Protected at the edge with Clerk authentication, role intent routing (Store Owner vs Buyer), and instant checkout via Razorpay.
             </p>
           </div>
+
+          {/* Source code */}
+          <a
+            href={REPO_URL}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="flex items-center gap-4 bg-[#1a1918] text-white rounded-2xl p-5 border-2 border-[#1a1918] shadow-pop hover:-translate-y-0.5 transition-transform"
+          >
+            <span className="p-2.5 bg-[#a7f432] rounded-xl border-2 border-[#fdfaf6]"><GitBranch className="w-5 h-5 text-[#1a1918]" /></span>
+            <span className="flex-1 min-w-0">
+              <span className="block font-mono text-xs font-black uppercase tracking-wider text-[#a7f432]">Open source on GitHub</span>
+              <span className="block font-bold text-sm truncate">kushalchalla981-tech/retailsync</span>
+              {COMMIT && <span className="block font-mono text-[11px] text-white/60">Running commit {COMMIT.slice(0, 7)}</span>}
+            </span>
+            <ExternalLink className="w-4 h-4 shrink-0" />
+          </a>
 
           <div className="text-center pt-2">
             <button

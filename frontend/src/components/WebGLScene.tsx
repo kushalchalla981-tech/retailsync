@@ -71,32 +71,18 @@ export const WebGLScene: React.FC<WebGLSceneProps> = ({
       hover: { value: number };
       isHover: boolean;
       introOffset: number;
-      video: HTMLVideoElement;
-      revealed: boolean;
     };
     const baseScale = new THREE.Vector3((3 / 4) * 1.05, 1.05, 1);
     const oScale = baseScale.clone();
-    let loaded = 0;
     const planes: Plane[] = members.map((m, i) => {
+      // The store poster (drawn with the store's own name) is the card face; no per-card video.
       const preview = createPreviewTexture(m, i);
-      const video = document.createElement('video');
-      Object.assign(video, {
-        src: `/cards/member-${(i % 6) + 1}.mp4`,
-        muted: true,
-        loop: true,
-        playsInline: true,
-        preload: 'auto',
-        crossOrigin: 'anonymous',
-      });
-      const vtex = new THREE.VideoTexture(video);
-      vtex.colorSpace = THREE.NoColorSpace;
-      vtex.minFilter = THREE.LinearFilter;
 
       const u: Record<string, THREE.IUniform> = {
         uVelocity: { value: 0 }, uVelocityAbs: { value: 0 }, uBump: { value: 1 }, uIndex: { value: i },
         uFold: { value: 1 }, uHover: { value: 0 }, uHit: { value: new THREE.Vector2(0.5, 0.5) },
         uReveal: { value: 0 }, uAlpha: { value: 1 }, uPaperBlend: { value: 0.2 }, uPaperDisplacement: { value: 0.008 },
-        uPreview: { value: preview }, uMap: { value: vtex }, uNormal: { value: paper },
+        uPreview: { value: preview }, uMap: { value: preview }, uNormal: { value: paper },
       };
       const material = new THREE.ShaderMaterial({ vertexShader: cardVertex, fragmentShader: cardFragment, uniforms: u, transparent: true, side: THREE.DoubleSide });
       const mesh = new THREE.Mesh(geometry, material);
@@ -104,24 +90,10 @@ export const WebGLScene: React.FC<WebGLSceneProps> = ({
       mesh.userData.index = i;
       group.add(mesh);
 
-      const plane: Plane = { mesh, u, hover: { value: 0 }, isHover: false, introOffset: 1, video, revealed: false };
-      const onReady = () => {
-        video.removeEventListener('canplaythrough', onReady);
-        loaded++;
-        cb.current.onProgress(loaded / N);
-        video.play().catch(() => {});
-      };
-      video.addEventListener('canplaythrough', onReady);
-      video.addEventListener('error', onReady); // a missing video still counts; preview poster stays
+      const plane: Plane = { mesh, u, hover: { value: 0 }, isHover: false, introOffset: 1 };
       return plane;
     });
-    cb.current.onProgress(0.05);
-
-    const reveal = (p: Plane) => {
-      if (p.revealed || p.video.readyState < 3) return;
-      p.revealed = true;
-      gsap.to(p.u.uReveal, { value: 1, duration: 0.6, delay: 0.55, ease: 'cubic.out' });
-    };
+    cb.current.onProgress(1);
 
     // ---- carousel state (same constants as the reference) -----------------
     const st = {
@@ -218,10 +190,7 @@ export const WebGLScene: React.FC<WebGLSceneProps> = ({
       const startIndex = Math.round(st.progress % N);
       planes.forEach((p, i) => {
         gsap.to(p, { introOffset: 0, duration: 3, delay: 0.4, ease: 'elastic.out(0.5,0.6)' });
-        gsap.to(p.u.uFold, {
-          value: 0, duration: 1.6, ease: 'quart.inOut', delay: startIndex === i ? 0.5 : Math.random() * 0.4,
-          onUpdate: () => reveal(p), onComplete: () => reveal(p),
-        });
+        gsap.to(p.u.uFold, { value: 0, duration: 1.6, ease: 'quart.inOut', delay: startIndex === i ? 0.5 : Math.random() * 0.4 });
       });
       setTimeout(() => { st.isHome = true; }, 200);
       setTimeout(() => { canRaycast = true; }, 600);
@@ -306,9 +275,6 @@ export const WebGLScene: React.FC<WebGLSceneProps> = ({
         const right = (tmp.x + 1) / 2;
         p.mesh.visible = right >= 0 && left <= 1 && p.u.uFold.value < 0.999;
 
-        if (p.mesh.visible && p.video.paused && p.video.readyState >= 2) p.video.play().catch(() => {});
-        else if (!p.mesh.visible && !p.video.paused) p.video.pause();
-        if (p.u.uFold.value < 0.99) reveal(p);
       });
 
       renderer.render(scene, camera);
@@ -328,8 +294,6 @@ export const WebGLScene: React.FC<WebGLSceneProps> = ({
       document.body.style.cursor = '';
       planes.forEach((p) => {
         gsap.killTweensOf([p, p.hover, p.u.uFold, p.u.uReveal, p.u.uBump]);
-        p.video.pause(); p.video.removeAttribute('src'); p.video.load();
-        (p.u.uMap.value as THREE.Texture).dispose();
         (p.u.uPreview.value as THREE.Texture).dispose();
         p.mesh.material.dispose();
       });

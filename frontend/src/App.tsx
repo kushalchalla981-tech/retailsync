@@ -8,10 +8,15 @@ import { Preloader } from './components/Preloader';
 import { TransitionBlocks, TransitionApi } from './components/TransitionBlocks';
 import { StoreDetailModal } from './components/StoreDetailModal';
 import { AboutModal } from './components/AboutModal';
-import { AuthModal } from './components/AuthModal';
 import { BottomHUD } from './components/BottomHUD';
 import { PlatformDashboard } from './components/dashboard/PlatformDashboard';
 import { sound } from './utils/sound';
+import { useClerk } from '@clerk/react';
+import { useRole } from './utils/roles';
+import { CartDrawer } from './components/CartDrawer';
+import { UniversalSearchModal } from './components/UniversalSearchModal';
+import { ProfileModal } from './components/ProfileModal';
+import { CreateStoreModal } from './components/dashboard/CreateStoreModal';
 
 export const App: React.FC = () => {
   const [fontsReady, setFontsReady] = useState(false);
@@ -20,10 +25,14 @@ export const App: React.FC = () => {
   const [stores, setStores] = useState<ExtendedStore[]>(() => storeManager.getStores());
   const [selected, setSelected] = useState<{ member: DemoStore | ExtendedStore; index: number } | null>(null);
   const [aboutOpen, setAboutOpen] = useState(false);
-  const [authOpen, setAuthOpen] = useState(false);
   const [dashboardOpen, setDashboardOpen] = useState(false);
   const [activeIndex, setActiveIndex] = useState(0);
   const [isMuted, setIsMuted] = useState(sound.getMuted());
+  const [searchOpen, setSearchOpen] = useState(false);
+  const [profileOpen, setProfileOpen] = useState(false);
+  const [creatorOpen, setCreatorOpen] = useState(false);
+  const { role } = useRole();
+  const clerk = useClerk();
 
   const scene = useRef<SceneApi | null>(null);
   const names = useRef<WorkNamesApi>(null);
@@ -69,6 +78,27 @@ export const App: React.FC = () => {
     sound.playWhoosh(1);
   }, []);
 
+  // ⌘K / Ctrl+K anywhere, or "/" when not typing, opens universal search.
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      const typing = e.target instanceof HTMLElement && (e.target.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(e.target.tagName));
+      if ((e.key === 'k' && (e.metaKey || e.ctrlKey)) || (e.key === '/' && !typing)) {
+        e.preventDefault();
+        setSearchOpen(true);
+      }
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, []);
+
+  /** Owner -> dashboard, creator -> store creator, shopper -> profile, signed out -> sign in. */
+  const openProfile = useCallback(() => {
+    if (role === 'owner') setDashboardOpen(true);
+    else if (role === 'creator') setCreatorOpen(true);
+    else if (role === 'visitor') setProfileOpen(true);
+    else clerk.openSignIn();
+  }, [role, clerk]);
+
   const toggleAbout = useCallback((v: boolean) => {
     setAboutOpen(v);
     scene.current?.setLocked(v);
@@ -97,8 +127,8 @@ export const App: React.FC = () => {
         onHome={() => { if (aboutOpen) toggleAbout(false); else if (selected) close(); }}
         onAbout={() => toggleAbout(!aboutOpen)}
         onToggleSound={() => setIsMuted(sound.toggleMute())}
-        onSignIn={() => setAuthOpen(true)}
-        onOpenDashboard={() => setDashboardOpen(true)}
+        onSearch={() => setSearchOpen(true)}
+        onProfile={openProfile}
       />
       <div className="app-wrapper">
         {!ready && <Preloader progress={progress} onDone={() => setReady(true)} />}
@@ -131,7 +161,7 @@ export const App: React.FC = () => {
         <TransitionBlocks ref={transition} />
       </div>
 
-      {ready && !selected && !aboutOpen && !authOpen && (
+      {ready && !selected && !aboutOpen && !searchOpen && (
         <BottomHUD
           member={activeStore}
           activeIndex={activeIndex}
@@ -147,7 +177,7 @@ export const App: React.FC = () => {
             setActiveIndex(nextIdx);
             scene.current?.goTo(nextIdx);
           }}
-          onCreateStore={() => setDashboardOpen(true)}
+          onCreateStore={openProfile}
         />
       )}
 
@@ -159,7 +189,12 @@ export const App: React.FC = () => {
         onNavigate={navigate}
       />
       <AboutModal isOpen={aboutOpen} onClose={() => toggleAbout(false)} />
-      <AuthModal isOpen={authOpen} onClose={() => setAuthOpen(false)} />
+      <UniversalSearchModal isOpen={searchOpen} onClose={() => setSearchOpen(false)} />
+      <ProfileModal isOpen={profileOpen} onClose={() => setProfileOpen(false)} onExplore={() => { if (selected) close(); }} />
+      {role === 'creator' && (
+        <CreateStoreModal isOpen={creatorOpen} onClose={() => setCreatorOpen(false)} onStoreCreated={() => setCreatorOpen(false)} />
+      )}
+      <CartDrawer />
     </main>
   );
 };
