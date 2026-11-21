@@ -15,7 +15,9 @@ import { registerErrorHandling } from './http/contract.js';
 import { cartRoutes } from './routes/carts.js';
 import { catalogRoutes } from './routes/catalog.js';
 import { orderRoutes } from './routes/orders.js';
+import { merchantStoreRoutes } from './routes/merchant-stores.js';
 import { paymentRoutes } from './routes/payments.js';
+import { verifierFromEnv, type TokenVerifier } from './http/clerk-auth.js';
 import { searchRoutes } from './routes/search.js';
 import { corsHeaders, telemetryRoutes } from './routes/telemetry.js';
 import { disconnectKafka } from './services/kafka.js';
@@ -32,6 +34,8 @@ export interface BuildAppOptions {
    * sink; Phase 3 injects the Kafka publisher here.
    */
   orderEvents?: OrderEventSink;
+  /** Clerk session verification for merchant writes; defaults to env config. Tests inject a stub. */
+  verifier?: TokenVerifier | null;
 }
 
 export function buildApp(options: BuildAppOptions): FastifyInstance {
@@ -48,7 +52,7 @@ export function buildApp(options: BuildAppOptions): FastifyInstance {
     if (request.method === 'OPTIONS') {
       reply
         .header('access-control-allow-methods', 'GET,POST,PUT,PATCH,DELETE,OPTIONS')
-        .header('access-control-allow-headers', 'content-type')
+        .header('access-control-allow-headers', 'content-type, authorization')
         .header('access-control-max-age', '86400')
         .code(204)
         .send();
@@ -63,6 +67,7 @@ export function buildApp(options: BuildAppOptions): FastifyInstance {
   app.register(cartRoutes, { prefix: '/api', db });
   app.register(orderRoutes, { prefix: '/api', db, orderEvents });
   app.register(paymentRoutes, { prefix: '/api' });
+  app.register(merchantStoreRoutes, { prefix: '/api', db, verifier: options.verifier === undefined ? verifierFromEnv() : options.verifier });
   app.register(searchRoutes, { prefix: '/api' });
   app.register(telemetryRoutes, { prefix: '/api' });
 

@@ -63,7 +63,7 @@ Refer to `V1_01_PLAN.md` for full implementation details:
   - `src/components/dashboard/CustomizeStore.tsx`: Storefront theme customizer with presets, color pickers, and live side-by-side preview.
   - `src/components/dashboard/CreateStoreModal.tsx`: 4-step Store Creator wizard replicating StoreForge capabilities with RetailSync aesthetics.
   - `src/components/dashboard/AIAssistant.tsx`: Interactive AI Assistant for real-time inventory, sales, and Aiven telemetry insights.
-  - `src/data/storeManager.ts`: Central reactive store management with localStorage persistence and default demo stores.
+  - `src/data/storeManager.ts`: Central reactive store manager. Merchant stores (ids `ms_…`) are stored in Aiven PostgreSQL via `/api/stores` (`backend/src/routes/merchant-stores.ts`, Clerk-token verified, owner = Clerk user id); the six demo stores stay built in with local edits.
   - **Dynamic 3D Card Carousel**: Automatically subscribes to `storeManager`; newly created stores in the dashboard immediately manifest as new 3D cards on the homepage with custom procedural preview posters, Modak typography, theme palettes, and smooth cylinder positioning.
 
 ### 3. Authentication: Clerk SDK Standard

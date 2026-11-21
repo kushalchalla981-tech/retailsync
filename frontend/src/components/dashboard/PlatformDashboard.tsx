@@ -31,9 +31,10 @@ export const PlatformDashboard: React.FC<PlatformDashboardProps> = ({ onBackToHo
   const { user } = useUser();
   const userEmail = user?.primaryEmailAddress?.emailAddress?.toLowerCase() || '';
   const isPlatformOwner = userEmail === OWNER_EMAIL;
+  const me = { id: user?.id ?? '', email: userEmail };
 
   const [stores, setStores] = useState<ExtendedStore[]>(() =>
-    storeManager.getStoresForUser(userEmail, isPlatformOwner)
+    storeManager.getStoresForUser(me, isPlatformOwner)
   );
   const [orders, setOrders] = useState<StoreOrder[]>(storeManager.getOrders());
   const [activeStoreId, setActiveStoreId] = useState<string>(stores[0]?.id || '');
@@ -44,7 +45,7 @@ export const PlatformDashboard: React.FC<PlatformDashboardProps> = ({ onBackToHo
   // Subscribe to changes in storeManager
   useEffect(() => {
     const unsubscribe = storeManager.subscribe(() => {
-      const updatedStores = storeManager.getStoresForUser(userEmail, isPlatformOwner);
+      const updatedStores = storeManager.getStoresForUser(me, isPlatformOwner);
       setStores([...updatedStores]);
       setOrders([...storeManager.getOrders()]);
       if (!updatedStores.find(s => s.id === activeStoreId) && updatedStores.length > 0) {
@@ -308,7 +309,7 @@ export const PlatformDashboard: React.FC<PlatformDashboardProps> = ({ onBackToHo
               {activeTab === 'customize' && (
                 <CustomizeStore
                   store={activeStore}
-                  onStoreUpdated={() => setStores([...storeManager.getStoresForUser(userEmail, isPlatformOwner)])}
+                  onStoreUpdated={() => setStores([...storeManager.getStoresForUser(me, isPlatformOwner)])}
                 />
               )}
 
@@ -345,7 +346,7 @@ export const PlatformDashboard: React.FC<PlatformDashboardProps> = ({ onBackToHo
         isOpen={isCreateModalOpen}
         onClose={() => setIsCreateModalOpen(false)}
         onStoreCreated={(newStore) => {
-          setStores([...storeManager.getStoresForUser(userEmail, isPlatformOwner)]);
+          setStores([...storeManager.getStoresForUser(me, isPlatformOwner)]);
           setActiveStoreId(newStore.id);
         }}
       />

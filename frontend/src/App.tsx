@@ -11,7 +11,7 @@ import { BottomHUD } from './components/BottomHUD';
 import { FlatStoreCarousel } from './components/FlatStoreCarousel';
 import { PlatformDashboard } from './components/dashboard/PlatformDashboard';
 import { sound } from './utils/sound';
-import { useClerk } from '@clerk/react';
+import { useAuth, useClerk, useUser } from '@clerk/react';
 import { useRole } from './utils/roles';
 import { CartDrawer } from './components/CartDrawer';
 import { useCart } from './context/CartContext';
@@ -35,6 +35,16 @@ export const App: React.FC = () => {
   const [creatorOpen, setCreatorOpen] = useState(false);
   const { role } = useRole();
   const clerk = useClerk();
+  const { getToken, isSignedIn } = useAuth();
+  const { user } = useUser();
+
+  // Merchant stores are saved on the server with the signed-in user's Clerk session.
+  useEffect(() => { storeManager.setTokenGetter(() => getToken()); }, [getToken]);
+  useEffect(() => {
+    if (!isSignedIn || !user) return;
+    const email = user.primaryEmailAddress?.emailAddress ?? '';
+    void storeManager.migrateLegacyStores({ id: user.id, email });
+  }, [isSignedIn, user]);
   const { isOpen: cartOpen } = useCart();
 
   const scene = useRef<SceneApi | null>(null);

@@ -16,7 +16,7 @@ export function useRole(): { role: Role; email: string; isLoaded: boolean; hasSt
   const email = user?.primaryEmailAddress?.emailAddress?.toLowerCase() ?? '';
   if (!isSignedIn) return { role: 'guest', email, isLoaded, hasStore: false };
   if (email === OWNER_EMAIL) return { role: 'owner', email, isLoaded, hasStore: true };
-  const hasStore = storeManager.userOwnsStores(email);
+  const hasStore = storeManager.userOwnsStores({ id: user?.id ?? '', email });
   if (hasStore || user?.publicMetadata?.role === 'creator') {
     return { role: 'creator', email, isLoaded, hasStore: true };
   }

@@ -68,9 +68,15 @@ export const CreateStoreModal: React.FC<CreateStoreModalProps> = ({ isOpen, onCl
     setAccentColor(t.accent);
   };
 
-  const handleFinalSubmit = () => {
+  const [saving, setSaving] = useState(false);
+  const [saveError, setSaveError] = useState<string | null>(null);
+
+  const handleFinalSubmit = async () => {
+    setSaving(true);
+    setSaveError(null);
+    try {
     const category = businessType.split(' ')[0] || 'Retail';
-    const newStore = storeManager.createStore({
+    const newStore = await storeManager.createStore({
       name: name || 'New Store',
       category,
       ownerEmail: userEmail || 'merchant@retailsync.app',
@@ -121,6 +127,11 @@ export const CreateStoreModal: React.FC<CreateStoreModalProps> = ({ isOpen, onCl
 
     onStoreCreated(newStore);
     onClose();
+    } catch (e) {
+      setSaveError(e instanceof Error ? e.message : 'Could not create the store. Please try again.');
+    } finally {
+      setSaving(false);
+    }
   };
 
   return (
@@ -465,6 +476,9 @@ export const CreateStoreModal: React.FC<CreateStoreModalProps> = ({ isOpen, onCl
           )}
         </div>
 
+        {saveError && (
+          <p role="alert" className="px-6 py-2 bg-[#ff5c35] text-white font-mono text-xs font-bold border-t-2 border-[#1a1918]">{saveError}</p>
+        )}
         {/* Footer controls */}
         <div className="bg-[#eedfc8] px-6 py-4 border-t-2 border-[#1a1918] flex items-center justify-between">
           {step > 1 ? (
@@ -491,10 +505,11 @@ export const CreateStoreModal: React.FC<CreateStoreModalProps> = ({ isOpen, onCl
           ) : (
             <button
               onClick={handleFinalSubmit}
-              className="flex items-center gap-2 px-6 py-2.5 bg-[#a7f432] text-[#1a1918] rounded-xl font-mono text-xs font-black uppercase tracking-wider border-2 border-[#1a1918] shadow-pop hover:bg-[#1a1918] hover:text-white transition-all"
+              disabled={saving}
+              className="disabled:opacity-60 disabled:cursor-wait flex items-center gap-2 px-6 py-2.5 bg-[#a7f432] text-[#1a1918] rounded-xl font-mono text-xs font-black uppercase tracking-wider border-2 border-[#1a1918] shadow-pop hover:bg-[#1a1918] hover:text-white transition-all"
             >
               <Sparkles className="w-4 h-4" />
-              <span>Launch Store on Platform ➔</span>
+              <span>{saving ? 'Launching…' : 'Launch Store on Platform ➔'}</span>
             </button>
           )}
         </div>

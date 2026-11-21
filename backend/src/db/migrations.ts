@@ -25,6 +25,7 @@ import { closePgPool, withTransaction } from '../services/postgres.js';
 /** Ordered migration list. Append new entries; never edit an applied file. */
 export const MIGRATION_FILES: readonly { id: string; file: string }[] = [
   { id: '0001_initial_schema', file: 'schema.sql' },
+  { id: '0002_merchant_stores', file: '0002_merchant_stores.sql' },
 ];
 
 /** Arbitrary constant key for pg_advisory_xact_lock ("RS" "MIGR" in hex). */

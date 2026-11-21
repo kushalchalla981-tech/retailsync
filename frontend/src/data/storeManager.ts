@@ -1,4 +1,5 @@
 import { DEMO_STORES, DemoStore } from './stores';
+import { API_BASE } from '../utils/api';
 
 export interface ProductItem {
   id: string;
@@ -28,6 +29,8 @@ export interface StoreOrder {
 }
 
 export interface ExtendedStore extends DemoStore {
+  /** Clerk user id of the owner (merchant stores only; set by the server). */
+  ownerId?: string;
   ownerEmail?: string;
   ownerName?: string;
   createdDate?: string;
@@ -154,24 +157,56 @@ const INITIAL_ORDERS: StoreOrder[] = [
   }
 ];
 
+/** Merchant stores live in PostgreSQL (v1.04); demo stores stay built in. */
+const isRemote = (id: string) => id.startsWith('ms_');
+const STORAGE_KEY_REMOTE_CACHE = 'retailsync_remote_stores_v1';
+
+export interface StoreUser {
+  id: string;
+  email: string;
+}
+
+type TokenGetter = () => Promise<string | null>;
+
+/** Fill derived fields the UI relies on (server stores the document as sent). */
+function normalize(s: ExtendedStore): ExtendedStore {
+  const catalog = Array.isArray(s.catalog) ? s.catalog : [];
+  return {
+    ...s,
+    catalog,
+    products: toProducts(catalog),
+    highlights: Array.isArray(s.highlights) ? s.highlights : [],
+    avatarTheme: s.avatarTheme ?? {
+      primaryColor: s.primaryColor,
+      accentColor: s.accentColor,
+      textColor: s.textColor || '#1a1918',
+      symbol: s.symbol || '✦',
+      bgGradient: 'from-amber-400 to-orange-500',
+    },
+  };
+}
+
 class StoreManager {
   private stores: ExtendedStore[] = [];
   private orders: StoreOrder[] = [];
   private listeners: (() => void)[] = [];
+  private getToken: TokenGetter | null = null;
+  /** Latest error from a server write, shown by the dashboard. */
+  lastError: string | null = null;
 
   constructor() {
     this.load();
+    void this.refresh();
   }
 
   private load() {
     try {
       const stored = localStorage.getItem(STORAGE_KEY_STORES);
-      if (stored) {
-        this.stores = upgradeDemoStores(JSON.parse(stored));
-      } else {
-        this.stores = initializeExtendedStores();
-        this.save();
-      }
+      const local: ExtendedStore[] = stored ? upgradeDemoStores(JSON.parse(stored)).filter(s => !isRemote(s.id)) : initializeExtendedStores();
+      const cached = localStorage.getItem(STORAGE_KEY_REMOTE_CACHE);
+      const remote: ExtendedStore[] = cached ? (JSON.parse(cached) as ExtendedStore[]).map(normalize) : [];
+      this.stores = [...remote, ...local];
+      if (!stored) this.save();
 
       const storedOrders = localStorage.getItem(STORAGE_KEY_ORDERS);
       if (storedOrders) {
@@ -186,9 +221,11 @@ class StoreManager {
     }
   }
 
+  /** Local (demo/legacy) stores go to localStorage; merchant stores only to a read cache. */
   private save() {
     try {
-      localStorage.setItem(STORAGE_KEY_STORES, JSON.stringify(this.stores));
+      localStorage.setItem(STORAGE_KEY_STORES, JSON.stringify(this.stores.filter(s => !isRemote(s.id))));
+      localStorage.setItem(STORAGE_KEY_REMOTE_CACHE, JSON.stringify(this.stores.filter(s => isRemote(s.id))));
     } catch {
       // ignore quota errors
     }
@@ -215,6 +252,53 @@ class StoreManager {
     };
   }
 
+  /** Called once by the app with Clerk's getToken so writes can be authorised. */
+  setTokenGetter(fn: TokenGetter) {
+    this.getToken = fn;
+  }
+
+  private async api(method: string, path: string, body?: unknown): Promise<Response> {
+    const token = this.getToken ? await this.getToken() : null;
+    if (!token) throw new Error('Please sign in again to save store changes.');
+    const res = await fetch(`${API_BASE}/api${path}`, {
+      method,
+      headers: { authorization: `Bearer ${token}`, ...(body ? { 'content-type': 'application/json' } : {}) },
+      body: body ? JSON.stringify(body) : undefined,
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => null) as { error?: { message?: string } } | null;
+      throw new Error(err?.error?.message || `Request failed (${res.status})`);
+    }
+    return res;
+  }
+
+  private fail(e: unknown) {
+    this.lastError = e instanceof Error ? e.message : String(e);
+    console.error('[storeManager]', this.lastError);
+    void this.refresh(); // fall back to the server's truth
+  }
+
+  /** Pull every merchant store from the server (public list). */
+  async refresh() {
+    try {
+      const res = await fetch(`${API_BASE}/api/stores`);
+      if (!res.ok) return;
+      const { items } = (await res.json()) as { items: ExtendedStore[] };
+      this.stores = [...items.map(normalize), ...this.stores.filter(s => !isRemote(s.id))];
+      this.save();
+    } catch {
+      // offline: keep cached stores
+    }
+  }
+
+  private pushRemote(id: string) {
+    if (!isRemote(id)) return;
+    const store = this.getStore(id);
+    if (!store) return;
+    this.lastError = null;
+    this.api('PUT', `/stores/${id}`, store).catch(e => this.fail(e));
+  }
+
   getStores(): ExtendedStore[] {
     return this.stores;
   }
@@ -238,44 +322,56 @@ class StoreManager {
       return updated;
     });
     this.save();
+    this.pushRemote(id);
   }
 
-  createStore(storeData: Omit<ExtendedStore, 'id' | 'products' | 'avatarTheme'>): ExtendedStore {
-    const id = `store-${Date.now()}`;
-    const newStore: ExtendedStore = {
-      ...storeData,
-      id,
-      createdDate: storeData.createdDate || new Date().toISOString(),
-      products: toProducts(storeData.catalog),
-      avatarTheme: {
-        primaryColor: storeData.primaryColor,
-        accentColor: storeData.accentColor,
-        textColor: storeData.textColor || '#1a1918',
-        symbol: storeData.symbol || '✦',
-        bgGradient: 'from-amber-400 to-orange-500'
-      }
-    };
-    this.stores.unshift(newStore);
+  /** Creates the store on the server; the signed-in user becomes its owner. */
+  async createStore(storeData: Omit<ExtendedStore, 'id' | 'products' | 'avatarTheme'>): Promise<ExtendedStore> {
+    const draft = normalize({ ...storeData, id: 'draft', createdDate: new Date().toISOString() } as ExtendedStore);
+    const { id: _id, ...body } = draft;
+    const res = await this.api('POST', '/stores', body);
+    const created = normalize((await res.json()) as ExtendedStore);
+    this.stores = [created, ...this.stores];
     this.save();
-    return newStore;
+    return created;
   }
 
-  getStoresForUser(userEmail: string, isPlatformOwner: boolean): ExtendedStore[] {
+  /** Owned stores: merchant stores by verified owner id; legacy local ones by email. Platform owner sees all. */
+  getStoresForUser(user: StoreUser, isPlatformOwner: boolean): ExtendedStore[] {
     if (isPlatformOwner) return this.getStores();
-    const normalized = userEmail.trim().toLowerCase();
-    if (!normalized) return [];
-    return this.getStores().filter(s => s.ownerEmail?.trim().toLowerCase() === normalized);
+    const email = user.email.trim().toLowerCase();
+    return this.stores.filter(s =>
+      isRemote(s.id) ? s.ownerId === user.id : !!email && s.ownerEmail?.trim().toLowerCase() === email,
+    );
   }
 
-  userOwnsStores(userEmail: string): boolean {
-    const normalized = userEmail.trim().toLowerCase();
-    if (!normalized) return false;
-    return this.getStores().some(s => s.ownerEmail?.trim().toLowerCase() === normalized);
+  userOwnsStores(user: StoreUser): boolean {
+    return this.getStoresForUser(user, false).length > 0;
+  }
+
+  /** Upload stores this user created in the browser before v1.04, then drop the local copies. */
+  async migrateLegacyStores(user: StoreUser) {
+    const email = user.email.trim().toLowerCase();
+    const demoIds = new Set(DEMO_STORES.map(d => d.id));
+    const legacy = this.stores.filter(s => !isRemote(s.id) && !demoIds.has(s.id) && s.ownerEmail?.trim().toLowerCase() === email);
+    for (const s of legacy) {
+      try {
+        const { id: _id, ...body } = s;
+        const res = await this.api('POST', '/stores', body);
+        const created = normalize((await res.json()) as ExtendedStore);
+        this.stores = [created, ...this.stores.filter(x => x.id !== s.id)];
+        this.save();
+      } catch (e) {
+        this.fail(e);
+        return;
+      }
+    }
   }
 
   deleteStore(id: string) {
     this.stores = this.stores.filter(s => s.id !== id);
     this.save();
+    if (isRemote(id)) this.api('DELETE', `/stores/${id}`).catch(e => this.fail(e));
   }
 
   addProduct(storeId: string, product: Omit<ProductItem, 'id'>) {
@@ -284,13 +380,10 @@ class StoreManager {
     this.stores = this.stores.map(s => {
       if (s.id !== storeId) return s;
       const updatedCatalog = [newProduct, ...s.catalog];
-      return {
-        ...s,
-        catalog: updatedCatalog,
-        products: toProducts(updatedCatalog)
-      };
+      return { ...s, catalog: updatedCatalog, products: toProducts(updatedCatalog) };
     });
     this.save();
+    this.pushRemote(storeId);
   }
 
   updateProductStock(storeId: string, productId: string, newStock: number) {
@@ -300,19 +393,17 @@ class StoreManager {
       return { ...s, catalog: updatedCatalog };
     });
     this.save();
+    this.pushRemote(storeId);
   }
 
   deleteProduct(storeId: string, productId: string) {
     this.stores = this.stores.map(s => {
       if (s.id !== storeId) return s;
       const updatedCatalog = s.catalog.filter(p => p.id !== productId);
-      return {
-        ...s,
-        catalog: updatedCatalog,
-        products: toProducts(updatedCatalog)
-      };
+      return { ...s, catalog: updatedCatalog, products: toProducts(updatedCatalog) };
     });
     this.save();
+    this.pushRemote(storeId);
   }
 
   getOrders(): StoreOrder[] {

@@ -34,7 +34,7 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({
     if (!isOpen || !email) return;
     const load = () => {
       setOrders(storeManager.getOrders().filter((o) => o.customerEmail.toLowerCase() === email));
-      setUserStores(storeManager.getStoresForUser(email, isPlatformOwner));
+      setUserStores(storeManager.getStoresForUser({ id: user?.id ?? '', email }, isPlatformOwner));
     };
     load();
     const unsub = storeManager.subscribe(load);
