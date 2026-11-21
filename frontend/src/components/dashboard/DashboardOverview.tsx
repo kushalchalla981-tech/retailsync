@@ -1,6 +1,6 @@
 import React from 'react';
 import { IndianRupee, ShoppingBag, Package, AlertTriangle, Database, Zap, Search } from 'lucide-react';
-import { ExtendedStore, StoreOrder } from '../../data/storeManager';
+import { ExtendedStore, StoreOrder, STOCK_BASELINE, STOCK_TOPLINE } from '../../data/storeManager';
 
 interface DashboardOverviewProps {
   store: ExtendedStore;
@@ -24,7 +24,7 @@ export const DashboardOverview: React.FC<DashboardOverviewProps> = ({
     return sum + amt;
   }, 0);
 
-  const lowStockCount = store.catalog.filter(p => p.stock <= 5).length;
+  const lowStockCount = store.catalog.filter(p => p.stock <= STOCK_BASELINE).length;
 
   return (
     <div className="space-y-6 animate-fadeIn">
@@ -89,7 +89,7 @@ export const DashboardOverview: React.FC<DashboardOverviewProps> = ({
             {store.catalog.length}
           </div>
           <div className="flex items-center gap-1.5 mt-2 text-xs font-mono font-bold text-[#786f66]">
-            <span>{allStores.length > 1 ? `In this store · ${allStores.length} stores total` : 'In this store'}</span>
+            <span>{allStores.length > 1 ? `${allStores.length} stores` : 'Store catalog'} · Top line cap: {STOCK_TOPLINE} units</span>
           </div>
         </div>
 
@@ -105,7 +105,7 @@ export const DashboardOverview: React.FC<DashboardOverviewProps> = ({
             {lowStockCount}
           </div>
           <div className="flex items-center gap-1.5 mt-2 text-xs font-mono font-bold text-[#786f66]">
-            <span>Items below 5 units</span>
+            <span>At or below baseline (≤ {STOCK_BASELINE} units)</span>
           </div>
         </div>
       </div>

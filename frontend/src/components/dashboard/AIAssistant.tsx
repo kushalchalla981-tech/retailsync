@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Sparkles, Send, Bot, User, Zap, Database, Search } from 'lucide-react';
-import { ExtendedStore } from '../../data/storeManager';
+import { ExtendedStore, STOCK_BASELINE, STOCK_TOPLINE } from '../../data/storeManager';
 
 interface AIAssistantProps {
   store: ExtendedStore;
@@ -55,14 +55,14 @@ export const AIAssistant: React.FC<AIAssistantProps> = ({ store, allStores }) =>
       let badge = 'RetailSync AI';
 
       const lower = text.toLowerCase();
-      if (lower.includes('stock') || lower.includes('low')) {
-        const lowStock = store.catalog.filter(p => p.stock <= 5);
+      if (lower.includes('stock') || lower.includes('low') || lower.includes('baseline') || lower.includes('capacity')) {
+        const lowStock = store.catalog.filter(p => p.stock <= STOCK_BASELINE);
         if (lowStock.length > 0) {
-          reply = `Found ${lowStock.length} low-stock item(s) in ${store.name}: ${lowStock.map(p => `"${p.name}" (${p.stock} units remaining)`).join(', ')}. Recommend reordering immediately to avoid oversell stockouts.`;
+          reply = `Found ${lowStock.length} item(s) at or below baseline safety stock (${STOCK_BASELINE} units) in ${store.name}: ${lowStock.map(p => `"${p.name}" (${p.stock} units)`).join(', ')}. The warehouse top line cap is ${STOCK_TOPLINE} units. Recommend replenishment to prevent oversell stockouts.`;
         } else {
-          reply = `All ${store.catalog.length} products in ${store.name} currently have healthy inventory levels (above 5 units). PostgreSQL row locks have prevented any overselling.`;
+          reply = `All ${store.catalog.length} products in ${store.name} currently maintain healthy inventory above the ${STOCK_BASELINE}-unit baseline (top line capacity: ${STOCK_TOPLINE} units). PostgreSQL row locks ensure zero overselling.`;
         }
-        badge = 'Inventory Query';
+        badge = 'Inventory Thresholds';
       } else if (lower.includes('revenue') || lower.includes('sales')) {
         reply = `${store.name} currently features ${store.catalog.length} active SKUs in the ${store.category} category. Total platform transaction volume across all ${allStores.length} stores is currently ₹1,48,250 with 100% verified Razorpay settlement.`;
         badge = 'Sales Metrics';

@@ -107,20 +107,20 @@ export const CreateStoreModal: React.FC<CreateStoreModalProps> = ({ isOpen, onCl
           name: `${name} Signature Product`,
           price: '₹2,499',
           emoji: symbol || '✨',
-          stock: 25,
+          stock: 23,
           sku: `RS-${slug.slice(0, 3).toUpperCase()}-001`,
           category,
-          description: `Flagship item launched with ${name}.`
+          description: `Flagship item launched with ${name}. Stock initialized at baseline safety threshold.`
         },
         {
           id: `sample-2`,
           name: `Essential Starter Pack`,
           price: '₹1,299',
           emoji: '📦',
-          stock: 14,
+          stock: 129,
           sku: `RS-${slug.slice(0, 3).toUpperCase()}-002`,
           category,
-          description: `Everything you need to get started with ${name}.`
+          description: `Everything you need to get started with ${name}. Stock initialized at warehouse top line cap.`
         }
       ]
     });

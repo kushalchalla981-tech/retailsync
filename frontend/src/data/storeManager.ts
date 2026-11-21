@@ -47,6 +47,10 @@ export interface ExtendedStore extends DemoStore {
 const STORAGE_KEY_STORES = 'retailsync_custom_stores_v1';
 const STORAGE_KEY_ORDERS = 'retailsync_orders_v1';
 
+export const STOCK_BASELINE = 23;
+export const STOCK_TOPLINE = 129;
+export const STOCK_TIERS = [23, 38, 54, 72, 88, 105, 118, 129];
+
 const toProducts = (catalog: ProductItem[]) => catalog.map(c => ({ name: c.name, price: c.price, emoji: c.emoji, image: c.image }));
 
 function demoCatalog(s: DemoStore, idx: number): ProductItem[] {
@@ -56,7 +60,7 @@ function demoCatalog(s: DemoStore, idx: number): ProductItem[] {
     price: p.price,
     emoji: p.emoji,
     image: p.image,
-    stock: [18, 4, 32, 2, 12, 45, 9, 27][(idx + pIdx) % 8],
+    stock: STOCK_TIERS[(idx + pIdx) % STOCK_TIERS.length],
     sku: `RS-${s.category.slice(0, 3).toUpperCase()}-${100 + pIdx}`,
     category: s.category,
     description: `Official genuine item curated by ${s.name}. Zero oversell stock locked in PostgreSQL.`
@@ -67,14 +71,30 @@ function demoCatalog(s: DemoStore, idx: number): ProductItem[] {
  * Saved demo stores predate the v1.01 catalog (3 products, no photos). Add the
  * new demo products and photos while keeping the owner's edits (stock, deletions
  * of other items, store settings) and any stores they created.
+ * Enforces baseline (23) and top line (129) threshold rules across all stored items.
  */
 function upgradeDemoStores(stores: ExtendedStore[]): ExtendedStore[] {
   return stores.map(st => {
     const idx = DEMO_STORES.findIndex(d => d.id === st.id);
-    if (idx < 0) return st;
+    if (idx < 0) {
+      // User-created store: clamp all products to baseline and top line bounds [23, 129]
+      const catalog = st.catalog.map(c => ({
+        ...c,
+        stock: Math.min(STOCK_TOPLINE, Math.max(STOCK_BASELINE, c.stock || STOCK_BASELINE))
+      }));
+      return { ...st, catalog, products: toProducts(catalog) };
+    }
     const fresh = demoCatalog(DEMO_STORES[idx], idx);
     const byName = new Map(fresh.map(f => [f.name, f]));
-    const kept = st.catalog.map(c => ({ ...c, image: c.image ?? byName.get(c.name)?.image }));
+    const kept = st.catalog.map(c => {
+      const freshProd = byName.get(c.name);
+      return {
+        ...c,
+        image: c.image ?? freshProd?.image,
+        // Upgrade product stock to fresh tiered distribution [23, 129]
+        stock: freshProd ? freshProd.stock : Math.min(STOCK_TOPLINE, Math.max(STOCK_BASELINE, c.stock || STOCK_BASELINE))
+      };
+    });
     const have = new Set(kept.map(c => c.name));
     const catalog = [...kept, ...fresh.filter(f => !have.has(f.name))];
     return { ...st, catalog, products: toProducts(catalog) };
@@ -376,7 +396,8 @@ class StoreManager {
 
   addProduct(storeId: string, product: Omit<ProductItem, 'id'>) {
     const newId = `${storeId}-prod-${Date.now()}`;
-    const newProduct: ProductItem = { ...product, id: newId };
+    const clampedStock = Math.min(STOCK_TOPLINE, Math.max(0, product.stock ?? STOCK_BASELINE));
+    const newProduct: ProductItem = { ...product, id: newId, stock: clampedStock };
     this.stores = this.stores.map(s => {
       if (s.id !== storeId) return s;
       const updatedCatalog = [newProduct, ...s.catalog];
@@ -387,9 +408,10 @@ class StoreManager {
   }
 
   updateProductStock(storeId: string, productId: string, newStock: number) {
+    const clampedStock = Math.min(STOCK_TOPLINE, Math.max(0, newStock));
     this.stores = this.stores.map(s => {
       if (s.id !== storeId) return s;
-      const updatedCatalog = s.catalog.map(p => p.id === productId ? { ...p, stock: newStock } : p);
+      const updatedCatalog = s.catalog.map(p => p.id === productId ? { ...p, stock: clampedStock } : p);
       return { ...s, catalog: updatedCatalog };
     });
     this.save();

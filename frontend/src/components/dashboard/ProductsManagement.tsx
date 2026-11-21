@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { PlusCircle, Search, Trash2, Edit2, Package, Check, X, AlertTriangle } from 'lucide-react';
-import { ExtendedStore, storeManager } from '../../data/storeManager';
+import { ExtendedStore, storeManager, STOCK_BASELINE, STOCK_TOPLINE } from '../../data/storeManager';
 import { ThunderLine } from '../ThunderLine';
 
 interface ProductsManagementProps {
@@ -18,7 +18,7 @@ export const ProductsManagement: React.FC<ProductsManagementProps> = ({ store })
   const [newProdName, setNewProdName] = useState('');
   const [newProdPrice, setNewProdPrice] = useState('₹');
   const [newProdEmoji, setNewProdEmoji] = useState('📦');
-  const [newProdStock, setNewProdStock] = useState(15);
+  const [newProdStock, setNewProdStock] = useState(STOCK_BASELINE);
   const [newProdCategory, setNewProdCategory] = useState(store.category);
   const [newProdSku, setNewProdSku] = useState(`RS-${store.category.slice(0, 3).toUpperCase()}-${Math.floor(Math.random() * 900 + 100)}`);
 
@@ -74,6 +74,16 @@ export const ProductsManagement: React.FC<ProductsManagementProps> = ({ store })
           <p className="text-xs font-mono text-[#786f66] mt-0.5">
             Real-time inventory backed by PostgreSQL row locks &amp; OpenSearch sync
           </p>
+          <div className="flex items-center gap-2 mt-2">
+            <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-mono font-bold bg-[#ffd600]/30 text-[#1a1918] border border-[#1a1918]/20">
+              <span className="w-1.5 h-1.5 rounded-full bg-[#ff5c35]" />
+              Baseline: {STOCK_BASELINE} units
+            </span>
+            <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-mono font-bold bg-[#00e5ff]/20 text-[#00778a] border border-[#1a1918]/20">
+              <span className="w-1.5 h-1.5 rounded-full bg-[#00778a]" />
+              Top Line: {STOCK_TOPLINE} units
+            </span>
+          </div>
         </div>
 
         <button
@@ -149,6 +159,8 @@ export const ProductsManagement: React.FC<ProductsManagementProps> = ({ store })
                       <div className="flex items-center gap-1.5">
                         <input
                           type="number"
+                          min="0"
+                          max={STOCK_TOPLINE}
                           value={editStockVal}
                           onChange={(e) => setEditStockVal(Number(e.target.value))}
                           className="w-16 px-2 py-1 bg-white border-2 border-[#1a1918] rounded font-bold text-xs"
@@ -169,7 +181,7 @@ export const ProductsManagement: React.FC<ProductsManagementProps> = ({ store })
                       </div>
                     ) : (
                       <div className="flex items-center gap-2">
-                        <span className={`font-black ${p.stock <= 5 ? 'text-[#ff5c35]' : 'text-[#1a1918]'}`}>
+                        <span className={`font-black ${p.stock <= STOCK_BASELINE ? 'text-[#ff5c35]' : 'text-[#1a1918]'}`}>
                           {p.stock} units
                         </span>
                         <button
@@ -190,9 +202,13 @@ export const ProductsManagement: React.FC<ProductsManagementProps> = ({ store })
                       <span className="bg-[#ff5c35]/20 text-[#ff5c35] border border-[#ff5c35] px-2 py-0.5 rounded-full text-[10px] font-black uppercase">
                         Out of Stock
                       </span>
-                    ) : p.stock <= 5 ? (
+                    ) : p.stock <= STOCK_BASELINE ? (
                       <span className="bg-[#ffd600]/30 text-[#b58100] border border-[#ffd600] px-2 py-0.5 rounded-full text-[10px] font-black uppercase flex items-center gap-1 w-fit">
-                        <AlertTriangle className="w-3 h-3" /> Low Stock
+                        <AlertTriangle className="w-3 h-3" /> Baseline (≤ {STOCK_BASELINE})
+                      </span>
+                    ) : p.stock >= STOCK_TOPLINE ? (
+                      <span className="bg-[#00e5ff]/20 text-[#00778a] border border-[#00e5ff] px-2 py-0.5 rounded-full text-[10px] font-black uppercase">
+                        Top Line ({STOCK_TOPLINE})
                       </span>
                     ) : (
                       <span className="bg-[#a7f432]/30 text-[#1a1918] border border-[#a7f432] px-2 py-0.5 rounded-full text-[10px] font-black uppercase">
@@ -282,12 +298,18 @@ export const ProductsManagement: React.FC<ProductsManagementProps> = ({ store })
                   />
                 </div>
                 <div>
-                  <label className="block font-mono text-xs font-bold uppercase text-[#1a1918] mb-1">
-                    Initial Stock *
-                  </label>
+                  <div className="flex items-center justify-between mb-1">
+                    <label className="block font-mono text-xs font-bold uppercase text-[#1a1918]">
+                      Initial Stock *
+                    </label>
+                    <span className="font-mono text-[10px] text-[#786f66]">
+                      {STOCK_BASELINE}–{STOCK_TOPLINE} units
+                    </span>
+                  </div>
                   <input
                     type="number"
                     min="0"
+                    max={STOCK_TOPLINE}
                     required
                     value={newProdStock}
                     onChange={(e) => setNewProdStock(Number(e.target.value))}
