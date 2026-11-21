@@ -1,0 +1,10 @@
+{
+  "name": "squad-cards",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "npx --yes hyperframes@0.9.30 preview",
+    "check": "npx --yes hyperframes@0.9.30 check",
+    "render:all": "node render-all.mjs"
+  }
+}
