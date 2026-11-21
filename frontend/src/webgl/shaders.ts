@@ -23,6 +23,7 @@ uniform float uIndex;
 uniform float uFold;
 uniform float uHover;
 uniform float uBump;
+uniform float uTime;
 uniform vec2 uHit;
 varying vec2 vUv;
 ${chunks}
@@ -41,6 +42,9 @@ void main() {
   // paper wobble
   newPos.z -= sin(uv.y * 10. + uIndex) * 0.01 * uBump;
   newPos.y -= cos(uv.x * 10. + uIndex + 100.) * 0.0035 * uBump;
+
+  // subtle floating alive wave
+  newPos.z += sin(uv.x * PI + uv.y * 2.0 + uTime * 1.4 + uIndex * 0.8) * 0.007 * (1.0 - uFold);
 
   // fold / unfold intro
   newPos.z += uFold * .4;
@@ -65,6 +69,7 @@ uniform float uHover;
 uniform float uReveal;
 uniform float uIndex;
 uniform float uAlpha;
+uniform float uTime;
 uniform float uPaperBlend;
 uniform float uPaperDisplacement;
 uniform vec2 uHit;
@@ -80,6 +85,14 @@ float rectangle(vec2 st, vec2 size, float aa) {
 }
 
 void main() {
+  // Ticket side punch notches: circular notches at y = 0.50 and perforation at y = 0.63
+  vec2 aspectUV = vec2(vUv.x * 0.75, vUv.y);
+  float dLeft1 = distance(aspectUV, vec2(0.0, 0.5));
+  float dRight1 = distance(aspectUV, vec2(0.75, 0.5));
+  float dLeft2 = distance(aspectUV, vec2(0.0, 0.627));
+  float dRight2 = distance(aspectUV, vec2(0.75, 0.627));
+  if (dLeft1 < 0.032 || dRight1 < 0.032 || dLeft2 < 0.022 || dRight2 < 0.022) discard;
+
   vec2 normalUV = rotateUV(vUv, uIndex * PI / 2.);
   vec3 normalTexel = texture2D(uNormal, normalUV).rgb;
   float dist = cmap(distance(vUv - vec2(0.5), uHit), 0., 0.35, 1., 0.) * uHover;
@@ -92,6 +105,19 @@ void main() {
 
   finalColor.rgb = blendScreen(finalColor.rgb, normalTexel.rgb, uPaperBlend);
   finalColor.rbg -= (cmap(normalTexel.g, 0., 0.1, 0.05, 0.) - normalTexel.g * dist * 0.1) * (uPaperBlend / 0.2);
+
+  // Holographic chromatic foil dispersion sheen on hover
+  if (uHover > 0.001) {
+    float angle = (vUv.x * 2.2 + vUv.y * 2.8) * 5.0 + uHit.x * 7.0 + uHit.y * 5.0 + uTime * 0.9;
+    vec3 foil = vec3(
+      sin(angle) * 0.5 + 0.5,
+      sin(angle + 2.09439) * 0.5 + 0.5,
+      sin(angle + 4.18879) * 0.5 + 0.5
+    );
+    float sweep = smoothstep(0.35, 0.65, sin((vUv.x - vUv.y * 0.6) * 7.0 + uHit.x * 6.0 + uTime * 1.2));
+    vec3 holo = foil * (0.6 + 0.4 * sweep);
+    finalColor.rgb = mix(finalColor.rgb, finalColor.rgb + holo * 0.38, uHover * 0.65);
+  }
 
   float offset = vUv.x * 0.04 * uFold;
   if (vUv.y - offset < uFold) discard;

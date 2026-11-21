@@ -93,6 +93,7 @@ export const WebGLScene: React.FC<WebGLSceneProps> = ({
         uFold: { value: 1 }, uHover: { value: 0 }, uHit: { value: new THREE.Vector2(0.5, 0.5) },
         uReveal: { value: 0 }, uAlpha: { value: 1 }, uPaperBlend: { value: 0.2 }, uPaperDisplacement: { value: 0.008 },
         uPreview: { value: preview }, uMap: { value: preview }, uNormal: { value: paper },
+        uTime: { value: 0 },
       };
       const material = new THREE.ShaderMaterial({ vertexShader: cardVertex, fragmentShader: cardFragment, uniforms: u, transparent: true, side: THREE.DoubleSide });
       const mesh = new THREE.Mesh(geometry, material);
@@ -221,10 +222,12 @@ export const WebGLScene: React.FC<WebGLSceneProps> = ({
     window.addEventListener('resize', onResize);
 
     // ---- loop -----------------------------------------------------------
+    const clock = new THREE.Clock();
     const tmp = new THREE.Vector3();
     let raf = 0;
     const tick = () => {
       raf = requestAnimationFrame(tick);
+      const elapsedTime = clock.getElapsedTime();
 
       // pointer velocity (px / frame)
       ptr.vx = ptr.x - ptr.lastX; ptr.vy = ptr.y - ptr.lastY;
@@ -277,6 +280,7 @@ export const WebGLScene: React.FC<WebGLSceneProps> = ({
         p.mesh.scale.copy(oScale).multiplyScalar(scaleBoost);
         p.u.uVelocity.value = st.velocity;
         p.u.uHover.value = p.hover.value;
+        p.u.uTime.value = elapsedTime;
 
         // frustum cull like the reference (both edges projected)
         tmp.set(x - p.mesh.scale.x / 2, 0, 0).project(camera);

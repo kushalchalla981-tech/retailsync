@@ -132,6 +132,60 @@ export const CreateStoreModal: React.FC<CreateStoreModalProps> = ({ isOpen, onCl
     setSaveError(null);
     try {
     const category = businessType.split(' ')[0] || 'Retail';
+    const storeSlug = slug || `store-${Date.now()}`;
+    const prefix = `RS-${storeSlug.slice(0, 3).toUpperCase()}`;
+
+    const defaultCatalog = () => {
+      const c = category.toLowerCase();
+      if (/tech|electron|gadget|hardw/i.test(c)) {
+        return [
+          { id: 'sample-1', name: 'Pro Wireless Headphones', price: '₹8,999', emoji: '🎧', stock: 54, sku: `${prefix}-001`, category, description: 'High fidelity audio with active noise cancellation.' },
+          { id: 'sample-2', name: 'Mechanical Tactile Keyboard', price: '₹5,499', emoji: '⌨️', stock: 38, sku: `${prefix}-002`, category, description: 'Hot-swappable RGB mechanical keyboard.' },
+          { id: 'sample-3', name: 'Smartwatch Ultra Pro', price: '₹12,999', emoji: '⌚', stock: 23, sku: `${prefix}-003`, category, description: 'Aerospace titanium case with sapphire glass.' }
+        ];
+      }
+      if (/fashion|apparel|cloth/i.test(c)) {
+        return [
+          { id: 'sample-1', name: 'Minimal Linen Overshirt', price: '₹3,299', emoji: '👔', stock: 54, sku: `${prefix}-001`, category, description: 'Tailored breathable linen for everyday movement.' },
+          { id: 'sample-2', name: 'Classic Streetwear Sneaker', price: '₹6,999', emoji: '👟', stock: 38, sku: `${prefix}-002`, category, description: 'Cushioned foam midsole with vulcanized rubber.' },
+          { id: 'sample-3', name: 'Canvas Carryall Tote', price: '₹1,299', emoji: '👜', stock: 72, sku: `${prefix}-003`, category, description: 'Heavyweight organic cotton duck canvas.' }
+        ];
+      }
+      if (/food|beverag|grocer|pantry/i.test(c)) {
+        return [
+          { id: 'sample-1', name: 'Single-Origin Cold Brew', price: '₹349', emoji: '☕', stock: 88, sku: `${prefix}-001`, category, description: 'Steeped 18 hours for smooth, chocolatey finish.' },
+          { id: 'sample-2', name: 'Artisanal Fruit Jam & Tonic', price: '₹499', emoji: '🍊', stock: 54, sku: `${prefix}-002`, category, description: 'Handcrafted in small batches from local orchards.' },
+          { id: 'sample-3', name: 'Himalayan Pink Salt Jar', price: '₹189', emoji: '🧂', stock: 105, sku: `${prefix}-003`, category, description: 'Pure unrefined mineral crystal salt.' }
+        ];
+      }
+      if (/book|station|print/i.test(c)) {
+        return [
+          { id: 'sample-1', name: 'Hardcover Clothbound Journal', price: '₹899', emoji: '📚', stock: 72, sku: `${prefix}-001`, category, description: 'Archival 120gsm acid-free bamboo paper.' },
+          { id: 'sample-2', name: 'Weighted Brass Fountain Pen', price: '₹2,499', emoji: '✒️', stock: 38, sku: `${prefix}-002`, category, description: 'Solid machined brass with fine iridium nib.' },
+          { id: 'sample-3', name: 'Solid Walnut Bookstand', price: '₹3,799', emoji: '📖', stock: 23, sku: `${prefix}-003`, category, description: 'Hand-finished American walnut with brass pins.' }
+        ];
+      }
+      if (/home|decor|furnitur/i.test(c)) {
+        return [
+          { id: 'sample-1', name: 'Handmade Ceramic Pour-Over', price: '₹1,899', emoji: '🏺', stock: 38, sku: `${prefix}-001`, category, description: 'Wheel-thrown stoneware with matte speckled glaze.' },
+          { id: 'sample-2', name: 'Stonewashed Table Runner', price: '₹1,499', emoji: '🧺', stock: 54, sku: `${prefix}-002`, category, description: 'Pre-washed French flax linen.' },
+          { id: 'sample-3', name: 'Cast Iron Heavy Skillet', price: '₹3,499', emoji: '🍳', stock: 28, sku: `${prefix}-003`, category, description: 'Pre-seasoned with organic flaxseed oil.' }
+        ];
+      }
+      if (/sport|fit|gym/i.test(c)) {
+        return [
+          { id: 'sample-1', name: 'Impact Foam Recovery Roller', price: '₹1,499', emoji: '🧘', stock: 54, sku: `${prefix}-001`, category, description: 'Deep tissue grid roller for muscle restoration.' },
+          { id: 'sample-2', name: 'Insulated Grip Bottle (1L)', price: '₹899', emoji: '🏋️', stock: 72, sku: `${prefix}-002`, category, description: 'Double-wall vacuum insulation keeps ice 24 hours.' },
+          { id: 'sample-3', name: 'Performance Speed Rope', price: '₹699', emoji: '⚡', stock: 88, sku: `${prefix}-003`, category, description: 'Aircraft aluminum handles with high-speed ball bearings.' }
+        ];
+      }
+      return [
+        { id: 'sample-1', name: `${name || 'New Store'} Signature Product`, price: '₹2,499', emoji: symbol || '✨', stock: 54, sku: `${prefix}-001`, category, description: `Flagship item launched with ${name || 'New Store'}. Stock locked in PostgreSQL.` },
+        { id: 'sample-2', name: 'Essential Starter Pack', price: '₹1,299', emoji: '📦', stock: 105, sku: `${prefix}-002`, category, description: `Everything you need to get started with ${name || 'New Store'}.` },
+        { id: 'sample-3', name: 'Collector Member Pass', price: '₹3,499', emoji: '⭐', stock: 28, sku: `${prefix}-003`, category, description: 'Exclusive perks and priority shipping nationwide.' }
+      ];
+    };
+
     const newStore = await storeManager.createStore({
       name: name || 'New Store',
       category,
@@ -148,7 +202,7 @@ export const CreateStoreModal: React.FC<CreateStoreModalProps> = ({ isOpen, onCl
       accentColor,
       textColor: '#1a1918',
       symbol: symbol || '🛍️',
-      slug: slug || `store-${Date.now()}`,
+      slug: storeSlug,
       cta: `Shop ${name}`,
       businessType,
       themeName: selectedTheme as any,
@@ -157,28 +211,7 @@ export const CreateStoreModal: React.FC<CreateStoreModalProps> = ({ isOpen, onCl
       contactEmail: contactEmail || 'owner@retailsync.app',
       contactPhone,
       contactAddress,
-      catalog: [
-        {
-          id: `sample-1`,
-          name: `${name} Signature Product`,
-          price: '₹2,499',
-          emoji: symbol || '✨',
-          stock: 23,
-          sku: `RS-${slug.slice(0, 3).toUpperCase()}-001`,
-          category,
-          description: `Flagship item launched with ${name}. Stock initialized at baseline safety threshold.`
-        },
-        {
-          id: `sample-2`,
-          name: `Essential Starter Pack`,
-          price: '₹1,299',
-          emoji: '📦',
-          stock: 129,
-          sku: `RS-${slug.slice(0, 3).toUpperCase()}-002`,
-          category,
-          description: `Everything you need to get started with ${name}. Stock initialized at warehouse top line cap.`
-        }
-      ]
+      catalog: defaultCatalog()
     });
 
     onStoreCreated(newStore);
