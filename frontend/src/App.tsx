@@ -219,7 +219,7 @@ export const App: React.FC = () => {
       handsFree={voice.handsFree}
       wakeSupported={voice.wakeSupported}
       onToggleHandsFree={voice.setHandsFree}
-      onActivate={voice.activate}
+      onActivate={voice.toggle}
     />
   );
 

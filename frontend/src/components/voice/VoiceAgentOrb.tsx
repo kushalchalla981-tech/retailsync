@@ -15,7 +15,7 @@ interface Props {
 }
 
 const LABEL: Record<VoiceStatus, string> = {
-  standby: 'Standby',
+  sleeping: 'Asleep',
   listening: 'Listening…',
   processing: 'Processing…',
   speaking: 'Speaking',
@@ -33,7 +33,7 @@ const Wave: React.FC<{ status: VoiceStatus; level: number }> = ({ status, level 
     const reduce = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
     let raf = 0, smooth = 0;
     const draw = (t: number) => {
-      const target = status === 'listening' ? levelRef.current : status === 'speaking' ? 0.45 + 0.25 * Math.sin(t / 180) : status === 'processing' ? 0.18 : 0.05;
+      const target = status === 'listening' ? Math.max(0.08, levelRef.current) : status === 'speaking' ? 0.45 + 0.25 * Math.sin(t / 180) : status === 'processing' ? 0.18 : 0.04;
       smooth += (target - smooth) * 0.25;
       const { width: w, height: h } = c;
       ctx.clearRect(0, 0, w, h);
@@ -57,7 +57,7 @@ const Wave: React.FC<{ status: VoiceStatus; level: number }> = ({ status, level 
 
 export const VoiceAgentOrb: React.FC<Props> = ({ status, level, heard, reply, error, handsFree, wakeSupported, onToggleHandsFree, onActivate }) => {
   const [open, setOpen] = useState(false);
-  const active = status !== 'standby';
+  const active = status !== 'sleeping';
   const showPanel = open || active || !!error;
 
   // Auto-collapse a while after the agent goes quiet.
@@ -68,7 +68,7 @@ export const VoiceAgentOrb: React.FC<Props> = ({ status, level, heard, reply, er
   }, [active, open, heard, reply]);
   useEffect(() => { if (active) setOpen(true); }, [active]);
 
-  const hint = handsFree ? 'Say "Hey Sync"' : 'Tap the orb to talk';
+  const hint = handsFree ? 'Say "Sync" to wake' : 'Tap the orb to wake';
 
   return (
     <div className="fixed bottom-4 right-4 sm:bottom-6 sm:right-6 z-[115] flex flex-col items-end gap-3 pointer-events-none">
@@ -77,7 +77,7 @@ export const VoiceAgentOrb: React.FC<Props> = ({ status, level, heard, reply, er
           <header className="flex items-center justify-between px-4 py-2.5 border-b border-white/10">
             <span className="font-mono text-[11px] font-black uppercase tracking-widest flex items-center gap-2">
               <span className={`w-2 h-2 rounded-full ${active ? 'bg-[#a7f432] animate-pulse' : 'bg-white/40'}`} aria-hidden />
-              <span role="status" aria-live="polite">{active ? LABEL[status] : `Standby · ${hint}`}</span>
+              <span role="status" aria-live="polite">{active ? `${LABEL[status]} · say "sleep" to stop` : `Asleep · ${hint}`}</span>
             </span>
             <button onClick={() => setOpen(false)} aria-label="Hide voice panel" className="p-1 rounded-full hover:bg-white/10"><X className="w-3.5 h-3.5" /></button>
           </header>
@@ -87,14 +87,14 @@ export const VoiceAgentOrb: React.FC<Props> = ({ status, level, heard, reply, er
             {reply && <p><span className="font-mono text-[10px] uppercase text-[#ff5c35] mr-1.5">Sync</span>{reply}</p>}
             {error && <p className="text-[#ff9b80]">{error}</p>}
             {!heard && !reply && !error && (
-              <p className="text-white/60 text-xs leading-relaxed">Try "Go to CircuitHub", "Open cart", "Search for headphones", "Create a store called Zenith" or "What's the price of sunglasses?"</p>
+              <p className="text-white/60 text-xs leading-relaxed">Once awake, Sync keeps listening. Try "Go to CircuitHub", "Open cart", "Search for headphones", "Create a store called Zenith". Say "sleep" when you're done.</p>
             )}
           </div>
           <footer className="px-4 py-2.5 border-t border-white/10 flex items-center justify-between gap-2">
             {wakeSupported ? (
               <label className="flex items-center gap-2 font-mono text-[11px] cursor-pointer select-none">
                 <input type="checkbox" checked={handsFree} onChange={(e) => onToggleHandsFree(e.target.checked)} className="accent-[#a7f432] w-4 h-4" />
-                Hands-free ("Hey Sync")
+                Wake word ("Sync")
               </label>
             ) : (
               <span className="font-mono text-[10px] text-white/50">Wake phrase needs Chrome, Edge or Safari</span>
@@ -105,7 +105,7 @@ export const VoiceAgentOrb: React.FC<Props> = ({ status, level, heard, reply, er
       )}
       <button
         onClick={() => { setOpen(true); onActivate(); }}
-        aria-label={active ? 'Stop the voice agent' : 'Talk to Sync, the voice agent'}
+        aria-label={active ? 'Put Sync to sleep' : 'Wake Sync, the voice agent'}
         aria-pressed={active}
         className={`pointer-events-auto relative w-14 h-14 sm:w-16 sm:h-16 rounded-full border-3 border-[#1a1918] shadow-pop flex items-center justify-center text-[#1a1918] transition-transform hover:-translate-y-0.5 active:translate-y-0 bg-[conic-gradient(from_180deg,#00e5ff,#ff5c35,#00e5ff)] ${active ? 'motion-safe:animate-pulse' : ''}`}
       >

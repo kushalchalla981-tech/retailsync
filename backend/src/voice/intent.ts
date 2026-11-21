@@ -15,6 +15,7 @@ export type VoiceAction =
   | { type: 'CLOSE_MODULE'; module: 'cart' }
   | { type: 'CLOSE_OVERLAY' }
   | { type: 'STOP' }
+  | { type: 'SLEEP' }
   | { type: 'CREATE_STORE_INPUT'; field: CreateField; value: string; category?: string }
   | { type: 'AI_QUERY'; query: string };
 
@@ -111,6 +112,7 @@ export function classify(transcript: string, ctx: IntentContext): IntentResult {
   const t = normalize(transcript);
   if (!t) return { action: { type: 'STOP' }, reply: "Sorry, I didn't catch that." };
 
+  if (/^(go to sleep|sleep|good ?night)\b|\b(go to sleep|sleep now)\b/.test(t)) return { action: { type: 'SLEEP' }, reply: 'Going to sleep. Say Sync to wake me.' };
   if (/^(stop|cancel|never ?mind|be quiet|shut up|quiet)\b/.test(t)) return { action: { type: 'STOP' }, reply: null };
   if (/^(close|go back|back|escape|exit|dismiss)\b/.test(t) && !/\bcart\b/.test(t)) return { action: { type: 'CLOSE_OVERLAY' }, reply: 'Closed.' };
 

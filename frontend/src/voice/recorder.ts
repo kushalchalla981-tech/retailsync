@@ -13,6 +13,8 @@ export interface RecordOptions {
   silenceMs?: number;
   maxMs?: number;
   signal?: AbortSignal;
+  /** Reuse an open microphone (kept open while the agent is awake); otherwise one is opened and closed here. */
+  stream?: MediaStream;
 }
 
 export class NoSpeechError extends Error {
@@ -49,9 +51,12 @@ export function encodeWav(pcm: Int16Array, rate = TARGET_RATE): Blob {
   return new Blob([buf], { type: 'audio/wav' });
 }
 
+export const openMic = () =>
+  navigator.mediaDevices.getUserMedia({ audio: { channelCount: 1, echoCancellation: true, noiseSuppression: true, autoGainControl: true } });
+
 export async function recordUtterance(opts: RecordOptions = {}): Promise<Blob> {
   const { onLevel, waitForSpeechMs = 6000, silenceMs = 1100, maxMs = 12000, signal } = opts;
-  const stream = await navigator.mediaDevices.getUserMedia({ audio: { channelCount: 1, echoCancellation: true, noiseSuppression: true, autoGainControl: true } });
+  const stream = opts.stream ?? (await openMic());
   const ctx = new AudioContext();
   await ctx.resume().catch(() => {}); // Safari/Chrome may start it suspended outside the click handler
   const source = ctx.createMediaStreamSource(stream);
@@ -91,7 +96,7 @@ export async function recordUtterance(opts: RecordOptions = {}): Promise<Blob> {
     onLevel?.(0);
     source.disconnect();
     proc.disconnect();
-    stream.getTracks().forEach((t) => t.stop());
+    if (!opts.stream) stream.getTracks().forEach((t) => t.stop());
     void ctx.close();
   }
 }

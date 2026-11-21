@@ -7,6 +7,7 @@ export type VoiceAction =
   | { type: 'CLOSE_MODULE'; module: 'cart' }
   | { type: 'CLOSE_OVERLAY' }
   | { type: 'STOP' }
+  | { type: 'SLEEP' }
   | { type: 'CREATE_STORE_INPUT'; field: 'name' | 'category' | 'theme' | 'submit'; value: string; category?: string }
   | { type: 'AI_QUERY'; query: string };
 

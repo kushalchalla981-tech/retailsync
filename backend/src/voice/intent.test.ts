@@ -32,6 +32,8 @@ describe('voice intents', () => {
     assert.deepEqual(act('open about'), { type: 'OPEN_MODULE', module: 'about' });
     assert.deepEqual(act('Go back'), { type: 'CLOSE_OVERLAY' });
     assert.deepEqual(act('stop'), { type: 'STOP' });
+    assert.deepEqual(act('Sleep.'), { type: 'SLEEP' });
+    assert.deepEqual(act('Sync, go to sleep'), { type: 'SLEEP' });
   });
   it('runs the store creation conversation', () => {
     const start = classify('Create a new store called ZenTech', { stores });
