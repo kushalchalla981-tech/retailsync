@@ -60,7 +60,7 @@ Only drill into specific files/directories after using graphify to identify the 
 
 ### 4. Payment Processing: Razorpay
 - Integrated via `new_frontend/src/utils/razorpay.ts` and `src/components/CheckoutModal.tsx`.
-- Key loaded from `VITE_RAZORPAY_KEY_ID` in `new_frontend/.env.local`. Test keys are preserved in `rzp-test-key.csv` (git-ignored).
+- Backend creates orders and verifies signatures (`backend/src/routes/payments.ts`) using `RAZORPAY_KEY_ID` / `RAZORPAY_KEY_SECRET` from the backend env; the browser only receives the public key id. Test keys are preserved in `rzp-test-key.csv` (git-ignored).
 - Built-in simulation fallback guarantees unbroken UX during offline or unconfigured test periods.
 
 ### 5. Backend API (`backend/`)
