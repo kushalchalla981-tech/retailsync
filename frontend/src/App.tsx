@@ -9,7 +9,7 @@ import { TransitionBlocks, TransitionApi } from './components/TransitionBlocks';
 import { StoreDetailModal } from './components/StoreDetailModal';
 import { AboutModal } from './components/AboutModal';
 import { BottomHUD } from './components/BottomHUD';
-import { StoreGrid } from './components/StoreGrid';
+import { FlatStoreCarousel } from './components/FlatStoreCarousel';
 import { PlatformDashboard } from './components/dashboard/PlatformDashboard';
 import { sound } from './utils/sound';
 import { useClerk } from '@clerk/react';
@@ -150,7 +150,7 @@ export const App: React.FC = () => {
             onUnsupported={() => { setWebglOk(false); setProgress(1); }}
           />
         )}
-        {!webglOk && ready && !selected && <StoreGrid stores={stores} onOpen={open} />}
+        {!webglOk && ready && !selected && <FlatStoreCarousel stores={stores} onOpen={open} />}
         <div className="page page--home home">
           {/* screen-reader / keyboard links */}
           <div className="home__links">

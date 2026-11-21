@@ -31,7 +31,8 @@ function finish(canvas: HTMLCanvasElement) {
 }
 
 /** Static poster used as uPreview until the HyperFrames video is decodable. */
-export function createPreviewTexture(m: TeamMember, index: number) {
+/** The store poster drawn with Canvas 2D (no WebGL needed). */
+export function drawPreviewCanvas(m: TeamMember, index: number): HTMLCanvasElement {
   const W = 768, H = 1024;
   const c = document.createElement('canvas');
   c.width = W; c.height = H;
@@ -68,7 +69,11 @@ export function createPreviewTexture(m: TeamMember, index: number) {
   ctx.globalAlpha = 1; ctx.fillStyle = '#fff'; ctx.textAlign = 'center';
   ctx.font = '800 30px Inter'; ctx.fillText(m.role.toLowerCase(), W / 2, H - 92);
 
-  return finish(c);
+  return c;
+}
+
+export function createPreviewTexture(m: TeamMember, index: number) {
+  return finish(drawPreviewCanvas(m, index));
 }
 
 /** Procedural stand-in for the reference's "paper-normals-map": fibrous height noise → tangent normals. */
