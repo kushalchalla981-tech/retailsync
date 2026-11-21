@@ -4,7 +4,7 @@
 
 <p align="center">
   <a href="https://retailsync-sable.vercel.app/"><img src="https://img.shields.io/badge/LIVE%20STORE-OPEN%20%E2%86%97-ff5c35?style=for-the-badge&labelColor=1a1918" alt="Live store"></a>
-  <a href="https://github.com/kushalchalla981-tech/retailsync/releases/tag/v1.01"><img src="https://img.shields.io/badge/RELEASE-v1.01-a7f432?style=for-the-badge&labelColor=1a1918" alt="v1.00"></a>
+  <a href="https://github.com/kushalchalla981-tech/retailsync/releases/tag/v1.01"><img src="https://img.shields.io/badge/RELEASE-v1.01-a7f432?style=for-the-badge&labelColor=1a1918" alt="v1.01"></a>
   <img src="https://img.shields.io/badge/BUILD%20BENGALURU-2.0-ffd600?style=for-the-badge&labelColor=1a1918" alt="Build Bengaluru 2.0">
   <img src="https://img.shields.io/badge/TEAM-HOURGLASS-00e5ff?style=for-the-badge&labelColor=1a1918" alt="Team Hourglass">
 </p>
