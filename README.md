@@ -4,7 +4,7 @@
 
 <p align="center">
   <a href="https://retailsync-sable.vercel.app/"><img src="https://img.shields.io/badge/LIVE%20STORE-OPEN%20%E2%86%97-ff5c35?style=for-the-badge&labelColor=1a1918" alt="Live store"></a>
-  <a href="https://github.com/kushalchalla981-tech/retailsync/releases/tag/v1.00"><img src="https://img.shields.io/badge/RELEASE-v1.00-a7f432?style=for-the-badge&labelColor=1a1918" alt="v1.00"></a>
+  <a href="https://github.com/kushalchalla981-tech/retailsync/releases/tag/v1.01"><img src="https://img.shields.io/badge/RELEASE-v1.01-a7f432?style=for-the-badge&labelColor=1a1918" alt="v1.00"></a>
   <img src="https://img.shields.io/badge/BUILD%20BENGALURU-2.0-ffd600?style=for-the-badge&labelColor=1a1918" alt="Build Bengaluru 2.0">
   <img src="https://img.shields.io/badge/TEAM-HOURGLASS-00e5ff?style=for-the-badge&labelColor=1a1918" alt="Team Hourglass">
 </p>
@@ -77,6 +77,7 @@ docs/       Pitch deck and README assets
 
 | Version | What shipped |
 |---|---|
+| [**v1.01**](https://github.com/kushalchalla981-tech/retailsync/releases/tag/v1.01) | Cart, 9 currencies, universal search, full-page stores with photos, role-aware profile. |
 | [**v1.00**](https://github.com/kushalchalla981-tech/retailsync/releases/tag/v1.00) | New storefront live, owner dashboard, store creator, Clerk sign-in, server-verified Razorpay checkout, all three Aiven services connected. |
 
 <p align="center"><br><b>Built for Build Bengaluru 2.0 by Team Hourglass</b> · <a href="https://retailsync-sable.vercel.app/">retailsync-sable.vercel.app</a></p>
