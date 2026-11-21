@@ -76,3 +76,11 @@ body { position: fixed; inset: 0; font-size: 16px; }
 .app-header a { white-space: nowrap; }
 @media (max-width: 480px) { .app-header a { margin: 0 6px; } }
 @media (max-width: 480px) { .app-header .app-header__sound { display: none; } }
+
+/* v1.05: print only the in-app receipt ("Print / Save PDF"). */
+@media print {
+  body * { visibility: hidden !important; }
+  .print-area, .print-area * { visibility: visible !important; }
+  .print-area { position: absolute !important; inset: 0 !important; box-shadow: none !important; border: none !important; max-height: none !important; overflow: visible !important; }
+  .no-print { display: none !important; }
+}

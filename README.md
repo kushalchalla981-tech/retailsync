@@ -4,7 +4,7 @@
 
 <p align="center">
   <a href="https://retailsync-sable.vercel.app/"><img src="https://img.shields.io/badge/LIVE%20STORE-OPEN%20%E2%86%97-ff5c35?style=for-the-badge&labelColor=1a1918" alt="Live store"></a>
-  <a href="https://github.com/kushalchalla981-tech/retailsync/releases/tag/v1.04"><img src="https://img.shields.io/badge/RELEASE-v1.04-a7f432?style=for-the-badge&labelColor=1a1918" alt="v1.04"></a>
+  <a href="https://github.com/kushalchalla981-tech/retailsync/releases/tag/v1.05"><img src="https://img.shields.io/badge/RELEASE-v1.05-a7f432?style=for-the-badge&labelColor=1a1918" alt="v1.05"></a>
   <img src="https://img.shields.io/badge/BUILD%20BENGALURU-2.0-ffd600?style=for-the-badge&labelColor=1a1918" alt="Build Bengaluru 2.0">
   <img src="https://img.shields.io/badge/TEAM-HOURGLASS-00e5ff?style=for-the-badge&labelColor=1a1918" alt="Team Hourglass">
 </p>
@@ -77,6 +77,7 @@ docs/       Pitch deck and README assets
 
 | Version | What shipped |
 |---|---|
+| [**v1.05**](https://github.com/kushalchalla981-tech/retailsync/releases/tag/v1.05) | Live stock on every device (row-locked checkout, Kafka, SSE), live service ledgers in About, buyer + owner invoices with printable receipt, store-only AI assistant, scrollable Customize. |
 | [**v1.04**](https://github.com/kushalchalla981-tech/retailsync/releases/tag/v1.04) | Merchant shops saved in PostgreSQL with Clerk-verified ownership; live Razorpay test checkout and invoice emails. |
 | [**v1.03**](https://github.com/kushalchalla981-tech/retailsync/releases/tag/v1.03) | Store-scoped merchant dashboards, emailed payment invoices, smooth scrolling in panels, WebGL-free fallback. |
 | [**v1.01**](https://github.com/kushalchalla981-tech/retailsync/releases/tag/v1.01) | Cart, 9 currencies, universal search, full-page stores with photos, role-aware profile. |

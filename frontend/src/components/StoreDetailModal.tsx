@@ -24,8 +24,14 @@ const ProductCard: React.FC<{ product: StoreProduct; store: DemoStore }> = ({ pr
   const timer = useRef<number | undefined>(undefined);
   useEffect(() => () => window.clearTimeout(timer.current), []);
 
+  const stock = product.stock;
+  const soldOut = stock !== undefined && stock <= 0;
+  const maxQty = Math.min(MAX_QTY, stock ?? MAX_QTY);
+  useEffect(() => { if (stock !== undefined && qty > Math.max(1, stock)) setQty(Math.max(1, stock)); }, [stock, qty]);
+
   const toCart = () => {
-    add({ storeId: store.id, storeName: store.name, storeSlug: store.slug, storeColor: store.primaryColor, name: product.name, price: product.price, emoji: product.emoji, image: product.image }, qty);
+    if (soldOut) return;
+    add({ storeId: store.id, productId: product.id, storeName: store.name, storeSlug: store.slug, storeColor: store.primaryColor, name: product.name, price: product.price, emoji: product.emoji, image: product.image }, qty);
     sound.playWhoosh(0.6);
     setAdded(true);
     window.clearTimeout(timer.current);
@@ -46,18 +52,26 @@ const ProductCard: React.FC<{ product: StoreProduct; store: DemoStore }> = ({ pr
       </div>
       <div className="p-4 flex flex-col gap-3 flex-1">
         <h4 className="font-black text-sm text-[#1a1918] leading-tight flex-1">{product.name}</h4>
-        <span className="self-start font-mono text-sm font-extrabold rounded-full px-3 py-0.5 border-2 border-[#1a1918] bg-[#1a1918]" style={{ color: store.primaryColor }}>
-          {format(product.price)}
-        </span>
+        <div className="flex items-center justify-between gap-2">
+          <span className="font-mono text-sm font-extrabold rounded-full px-3 py-0.5 border-2 border-[#1a1918] bg-[#1a1918]" style={{ color: store.primaryColor }}>
+            {format(product.price)}
+          </span>
+          {stock !== undefined && (
+            <span aria-live="polite" className={`font-mono text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full border-2 border-[#1a1918] ${soldOut ? 'bg-[#1a1918] text-white' : stock <= 5 ? 'bg-[#ff5c35] text-white' : 'bg-[#f4f0ed] text-[#1a1918]'}`}>
+              {soldOut ? 'Sold out' : stock <= 5 ? `Only ${stock} left` : `${stock} in stock`}
+            </span>
+          )}
+        </div>
         <div className="flex items-center justify-between gap-2">
           <div className="flex items-center border-2 border-[#1a1918] rounded-full overflow-hidden" role="group" aria-label={`Quantity for ${product.name}`}>
             <button aria-label="Decrease quantity" disabled={qty <= 1} onClick={() => setQty((q) => q - 1)} className="px-2.5 py-1.5 disabled:opacity-30 hover:bg-[#f4f0ed]"><Minus className="w-3.5 h-3.5" /></button>
             <span className="font-mono text-sm font-black w-7 text-center" aria-live="polite">{qty}</span>
-            <button aria-label="Increase quantity" disabled={qty >= MAX_QTY} onClick={() => setQty((q) => q + 1)} className="px-2.5 py-1.5 disabled:opacity-30 hover:bg-[#f4f0ed]"><Plus className="w-3.5 h-3.5" /></button>
+            <button aria-label="Increase quantity" disabled={qty >= maxQty} onClick={() => setQty((q) => q + 1)} className="px-2.5 py-1.5 disabled:opacity-30 hover:bg-[#f4f0ed]"><Plus className="w-3.5 h-3.5" /></button>
           </div>
           <button
             onClick={toCart}
-            className={`flex-1 flex items-center justify-center gap-1.5 px-3 py-2 rounded-full font-mono text-xs uppercase tracking-wider font-black border-2 border-[#1a1918] transition-colors ${added ? 'bg-[#a7f432] text-[#1a1918]' : 'bg-[#1a1918] text-white hover:bg-[#ff5c35]'}`}
+            disabled={soldOut}
+            className={`disabled:opacity-40 disabled:cursor-not-allowed flex-1 flex items-center justify-center gap-1.5 px-3 py-2 rounded-full font-mono text-xs uppercase tracking-wider font-black border-2 border-[#1a1918] transition-colors ${added ? 'bg-[#a7f432] text-[#1a1918]' : 'bg-[#1a1918] text-white hover:bg-[#ff5c35]'}`}
           >
             {added ? <CheckCircle2 className="w-3.5 h-3.5" /> : <ShoppingCart className="w-3.5 h-3.5" />}
             <span>{added ? 'Added' : 'Add'}</span>
@@ -65,7 +79,8 @@ const ProductCard: React.FC<{ product: StoreProduct; store: DemoStore }> = ({ pr
         </div>
         <button
           onClick={() => { toCart(); setOpen(true); }}
-          className="flex items-center justify-center gap-1.5 bg-[#ff5c35] text-white px-3 py-2 rounded-full font-mono text-xs uppercase tracking-wider font-black border-2 border-[#1a1918] hover:bg-[#1a1918] transition-colors"
+          disabled={soldOut}
+          className="disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center gap-1.5 bg-[#ff5c35] text-white px-3 py-2 rounded-full font-mono text-xs uppercase tracking-wider font-black border-2 border-[#1a1918] hover:bg-[#1a1918] transition-colors"
         >
           <Zap className="w-3.5 h-3.5" />
           <span>Buy now</span>

@@ -191,7 +191,7 @@ export const App: React.FC = () => {
       )}
 
       <StoreDetailModal
-        member={selected?.member ?? null}
+        member={selected ? stores.find((s) => s.id === selected.member.id) ?? selected.member : null}
         currentIndex={selected?.index ?? 0}
         totalStores={stores.length}
         onClose={close}

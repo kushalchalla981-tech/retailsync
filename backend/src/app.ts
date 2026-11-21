@@ -11,6 +11,7 @@ import Fastify, { type FastifyInstance } from 'fastify';
 
 import type { LogLevel } from './config.js';
 import { noopOrderEventSink, type OrderEventSink } from './events/order-events.js';
+import { noopStorefrontEvents, type StorefrontEventSink } from './events/storefront-events.js';
 import { registerErrorHandling } from './http/contract.js';
 import { cartRoutes } from './routes/carts.js';
 import { catalogRoutes } from './routes/catalog.js';
@@ -19,6 +20,7 @@ import { merchantStoreRoutes } from './routes/merchant-stores.js';
 import { paymentRoutes } from './routes/payments.js';
 import { verifierFromEnv, type TokenVerifier } from './http/clerk-auth.js';
 import { searchRoutes } from './routes/search.js';
+import { storefrontStockRoutes } from './routes/storefront-stock.js';
 import { corsHeaders, telemetryRoutes } from './routes/telemetry.js';
 import { disconnectKafka } from './services/kafka.js';
 import { closeOpenSearch } from './services/opensearch.js';
@@ -36,6 +38,8 @@ export interface BuildAppOptions {
   orderEvents?: OrderEventSink;
   /** Clerk session verification for merchant writes; defaults to env config. Tests inject a stub. */
   verifier?: TokenVerifier | null;
+  /** Storefront checkout / stock events; production injects the Kafka publisher. */
+  storefrontEvents?: StorefrontEventSink;
 }
 
 export function buildApp(options: BuildAppOptions): FastifyInstance {
@@ -66,8 +70,11 @@ export function buildApp(options: BuildAppOptions): FastifyInstance {
   app.register(catalogRoutes, { prefix: '/api', db });
   app.register(cartRoutes, { prefix: '/api', db });
   app.register(orderRoutes, { prefix: '/api', db, orderEvents });
-  app.register(paymentRoutes, { prefix: '/api' });
-  app.register(merchantStoreRoutes, { prefix: '/api', db, verifier: options.verifier === undefined ? verifierFromEnv() : options.verifier });
+  const verifier = options.verifier === undefined ? verifierFromEnv() : options.verifier;
+  const storefrontEvents = options.storefrontEvents ?? noopStorefrontEvents;
+  app.register(paymentRoutes, { prefix: '/api', db, events: storefrontEvents });
+  app.register(merchantStoreRoutes, { prefix: '/api', db, verifier });
+  app.register(storefrontStockRoutes, { prefix: '/api', db, verifier, events: storefrontEvents });
   app.register(searchRoutes, { prefix: '/api' });
   app.register(telemetryRoutes, { prefix: '/api' });
 

@@ -1,6 +1,8 @@
-import React, { useState } from 'react';
-import { Sparkles, Send, Bot, User, Zap, Database, Search } from 'lucide-react';
-import { ExtendedStore, STOCK_BASELINE, STOCK_TOPLINE } from '../../data/storeManager';
+import React, { useEffect, useRef, useState } from 'react';
+import { Sparkles, Send, Bot, User, Zap, Database, Search, Trash2 } from 'lucide-react';
+import { ExtendedStore, STOCK_BASELINE, STOCK_TOPLINE, storeManager } from '../../data/storeManager';
+import { answer } from '../../utils/assistantBrain';
+import { recentTelemetry } from '../../utils/telemetry';
 
 interface AIAssistantProps {
   store: ExtendedStore;
@@ -15,82 +17,89 @@ interface ChatMessage {
   dataBadge?: string;
 }
 
-export const AIAssistant: React.FC<AIAssistantProps> = ({ store, allStores }) => {
-  const [messages, setMessages] = useState<ChatMessage[]>([
-    {
-      id: 'm1',
-      sender: 'ai',
-      text: `Hello! I am your RetailSync AI Intelligence Assistant for ${store.name}. I have live read-access to your Aiven PostgreSQL catalog, Apache Kafka stream, and OpenSearch search indices. How can I help you optimize your store today?`,
-      time: 'Just now',
-      dataBadge: 'Aiven Live Sync'
-    }
-  ]);
+const MAX_SAVED = 100;
+const chatKey = (storeId: string) => `retailsync_ai_chat_${storeId}`;
+const stamp = () => new Date().toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' });
+
+const greeting = (store: ExtendedStore): ChatMessage => ({
+  id: 'm1',
+  sender: 'ai',
+  text: `Hello! I'm the RetailSync assistant for ${store.name}. Ask me about product prices, stock levels, orders, storefront copy and themes, or the Aiven services behind your store.`,
+  time: stamp(),
+  dataBadge: 'Store intelligence',
+});
+
+function loadChat(store: ExtendedStore): ChatMessage[] {
+  try {
+    const raw = localStorage.getItem(chatKey(store.id));
+    const parsed = raw ? (JSON.parse(raw) as ChatMessage[]) : null;
+    if (Array.isArray(parsed) && parsed.length) return parsed;
+  } catch { /* storage unavailable */ }
+  return [greeting(store)];
+}
+
+export const AIAssistant: React.FC<AIAssistantProps> = ({ store }) => {
+  const [messages, setMessages] = useState<ChatMessage[]>(() => loadChat(store));
   const [inputText, setInputText] = useState('');
   const [isTyping, setIsTyping] = useState(false);
+  const [confirmClear, setConfirmClear] = useState(false);
+  const scroller = useRef<HTMLDivElement>(null);
+  const loadedFor = useRef(store.id);
+
+  // Switching stores loads that store's own history.
+  useEffect(() => {
+    if (loadedFor.current === store.id) return;
+    loadedFor.current = store.id;
+    setMessages(loadChat(store));
+    setConfirmClear(false);
+  }, [store]);
+
+  useEffect(() => {
+    try { localStorage.setItem(chatKey(loadedFor.current), JSON.stringify(messages.slice(-MAX_SAVED))); } catch { /* ignore */ }
+    scroller.current?.scrollTo({ top: scroller.current.scrollHeight, behavior: 'smooth' });
+  }, [messages]);
 
   const samplePrompts = [
     'Which products are low on stock?',
-    'Summarize catalog revenue potential',
-    'How is Kafka event throughput doing?',
+    'Show items under ₹1,000',
+    'How are orders doing?',
+    'How is Kafka doing?',
     'Write a flash sale announcement banner'
   ];
 
+  const clearChat = () => {
+    if (!confirmClear) { setConfirmClear(true); return; }
+    setConfirmClear(false);
+    try { localStorage.removeItem(chatKey(store.id)); } catch { /* ignore */ }
+    setMessages([greeting(store)]);
+  };
+
   const handleSendMessage = (textToSend?: string) => {
     const text = textToSend || inputText;
-    if (!text.trim()) return;
+    if (!text.trim() || isTyping) return;
 
-    const userMsg: ChatMessage = {
-      id: `u-${Date.now()}`,
-      sender: 'user',
-      text,
-      time: 'Just now'
-    };
-
-    setMessages(prev => [...prev, userMsg]);
+    setMessages(prev => [...prev, { id: `u-${Date.now()}`, sender: 'user', text, time: stamp() }]);
     if (!textToSend) setInputText('');
     setIsTyping(true);
 
-    setTimeout(() => {
-      let reply = '';
-      let badge = 'RetailSync AI';
-
-      const lower = text.toLowerCase();
-      if (lower.includes('stock') || lower.includes('low') || lower.includes('baseline') || lower.includes('capacity')) {
-        const lowStock = store.catalog.filter(p => p.stock <= STOCK_BASELINE);
-        if (lowStock.length > 0) {
-          reply = `Found ${lowStock.length} item(s) at or below baseline safety stock (${STOCK_BASELINE} units) in ${store.name}: ${lowStock.map(p => `"${p.name}" (${p.stock} units)`).join(', ')}. The warehouse top line cap is ${STOCK_TOPLINE} units. Recommend replenishment to prevent oversell stockouts.`;
-        } else {
-          reply = `All ${store.catalog.length} products in ${store.name} currently maintain healthy inventory above the ${STOCK_BASELINE}-unit baseline (top line capacity: ${STOCK_TOPLINE} units). PostgreSQL row locks ensure zero overselling.`;
-        }
-        badge = 'Inventory Thresholds';
-      } else if (lower.includes('revenue') || lower.includes('sales')) {
-        reply = `${store.name} currently features ${store.catalog.length} active SKUs in the ${store.category} category. Total platform transaction volume across all ${allStores.length} stores is currently ₹1,48,250 with 100% verified Razorpay settlement.`;
-        badge = 'Sales Metrics';
-      } else if (lower.includes('kafka') || lower.includes('aiven') || lower.includes('infra')) {
-        reply = `Aiven Infrastructure Status: Apache Kafka topics ("orders.placed" and "inventory.updated") are consuming at 142 events/min with 0 lag. PostgreSQL pessimistic locking (SELECT ... FOR UPDATE) is operating at sub-millisecond lock acquisition. OpenSearch index latency is 38ms.`;
-        badge = 'Aiven Health';
-      } else if (lower.includes('banner') || lower.includes('copy') || lower.includes('sale')) {
-        reply = `Here are 2 high-conversion announcement ideas for ${store.name}:\n1. "⚡ FLASH SALE: Get flat 20% off on all ${store.category} items with code SYNC20. Instant dispatch across India!"\n2. "🌿 Weekend exclusive: Free express shipping + surprise gift on orders above ₹1,499."`;
-        badge = 'Copy Generator';
-      } else {
-        reply = `Understood. Analyzing telemetry for ${store.name}... All systems operational. Your store is healthy, catalog is synced across OpenSearch, and payments are routed via Razorpay.`;
-      }
-
-      const aiMsg: ChatMessage = {
-        id: `ai-${Date.now()}`,
-        sender: 'ai',
-        text: reply,
-        time: 'Just now',
-        dataBadge: badge
-      };
-
-      setMessages(prev => [...prev, aiMsg]);
+    window.setTimeout(() => {
+      const reply = answer(text, {
+        storeName: store.name,
+        category: store.category,
+        tagline: store.tagline,
+        catalog: store.catalog,
+        orders: storeManager.getOrders().filter(o => o.storeId === store.id),
+        telemetry: recentTelemetry(),
+        baseline: STOCK_BASELINE,
+        topline: STOCK_TOPLINE,
+      });
+      setMessages(prev => [...prev, { id: `ai-${Date.now()}`, sender: 'ai', text: reply.text, time: stamp(), dataBadge: reply.badge }]);
       setIsTyping(false);
-    }, 700);
+    }, 450);
   };
 
   return (
-    <div className="bg-[#fdfaf6] rounded-3xl border-4 border-[#1a1918] shadow-pop-lg overflow-hidden flex flex-col h-[650px] animate-fadeIn">
+    <div className="bg-[#fdfaf6] rounded-3xl border-4 border-[#1a1918] shadow-pop-lg overflow-hidden flex flex-col h-[min(650px,calc(100dvh-10rem))] min-h-[420px] animate-fadeIn">
       {/* Header */}
       <div className="bg-[#1a1918] text-white p-5 border-b-4 border-[#1a1918] flex items-center justify-between">
         <div className="flex items-center gap-3">
@@ -112,15 +121,31 @@ export const AIAssistant: React.FC<AIAssistantProps> = ({ store, allStores }) =>
           </div>
         </div>
 
-        <div className="hidden sm:flex items-center gap-3 text-xs font-mono text-[#a09890]">
-          <span className="flex items-center gap-1"><Database className="w-3.5 h-3.5 text-[#ff5c35]" /> Postgres</span>
-          <span className="flex items-center gap-1"><Zap className="w-3.5 h-3.5 text-[#ffd600]" /> Kafka</span>
-          <span className="flex items-center gap-1"><Search className="w-3.5 h-3.5 text-[#00e5ff]" /> OpenSearch</span>
+        <div className="flex items-center gap-3 text-xs font-mono text-[#a09890]">
+          <span className="hidden lg:flex items-center gap-1"><Database className="w-3.5 h-3.5 text-[#ff5c35]" /> Postgres</span>
+          <span className="hidden lg:flex items-center gap-1"><Zap className="w-3.5 h-3.5 text-[#ffd600]" /> Kafka</span>
+          <span className="hidden lg:flex items-center gap-1"><Search className="w-3.5 h-3.5 text-[#00e5ff]" /> OpenSearch</span>
+          <div className="relative">
+            <button
+              type="button"
+              onClick={clearChat}
+              onBlur={() => setConfirmClear(false)}
+              aria-label={confirmClear ? 'Confirm clearing the chat history' : 'Clear chat history'}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full border-2 font-black uppercase text-[10px] tracking-wider transition-colors ${confirmClear ? 'bg-[#ff5c35] border-[#ff5c35] text-white' : 'border-white/30 text-white hover:bg-white/10'}`}
+            >
+              <Trash2 className="w-3.5 h-3.5" /> {confirmClear ? 'Confirm' : 'Clear chat'}
+            </button>
+            {confirmClear && (
+              <span role="tooltip" className="absolute right-0 top-full mt-2 w-48 z-10 bg-white text-[#1a1918] border-2 border-[#1a1918] rounded-xl p-2 text-[11px] shadow-pop">
+                Delete this store's chat history? Click Confirm.
+              </span>
+            )}
+          </div>
         </div>
       </div>
 
       {/* Messages area */}
-      <div className="flex-1 overflow-y-auto p-5 space-y-4 bg-[#fbf7f2]">
+      <div ref={scroller} aria-live="polite" className="flex-1 overflow-y-auto overscroll-contain p-5 space-y-4 bg-[#fbf7f2]">
         {messages.map((m) => (
           <div
             key={m.id}
@@ -159,7 +184,7 @@ export const AIAssistant: React.FC<AIAssistantProps> = ({ store, allStores }) =>
         {isTyping && (
           <div className="flex items-center gap-2 text-xs font-mono text-[#786f66] bg-white w-fit px-3 py-1.5 rounded-full border border-[#1a1918]">
             <Sparkles className="w-3.5 h-3.5 text-[#ff5c35] animate-spin" />
-            <span>AI analyzing store telemetry...</span>
+            <span>Checking {store.name}'s data…</span>
           </div>
         )}
       </div>
@@ -189,7 +214,8 @@ export const AIAssistant: React.FC<AIAssistantProps> = ({ store, allStores }) =>
           type="text"
           value={inputText}
           onChange={(e) => setInputText(e.target.value)}
-          placeholder={`Ask anything about ${store.name}, inventory, orders, or marketing...`}
+          placeholder={`Ask about ${store.name}'s prices, stock, orders, marketing or infrastructure…`}
+          aria-label="Ask the store assistant"
           className="flex-1 px-4 py-2.5 bg-[#f4f0ed] border-2 border-[#1a1918] rounded-xl font-mono text-xs text-[#1a1918] focus:outline-none"
         />
         <button

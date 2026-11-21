@@ -213,7 +213,7 @@ interface KafkaWorld {
 function kafkaWorld(overrides: Partial<KafkaWorld> = {}): KafkaWorld {
   return {
     brokers: 3,
-    topics: new Set(['orders.placed', 'inventory.updated', DIAGNOSTICS_TOPIC]),
+    topics: new Set(['orders.placed', 'inventory.updated', 'retailsync-orders', 'retailsync-inventory', DIAGNOSTICS_TOPIC]),
     log: [{ key: 'older-probe', value: '{}' }],
     created: [],
     deletedGroups: [],
@@ -330,7 +330,7 @@ describe('Kafka probe', () => {
   });
 
   it('creates the diagnostics topic on demand with 1 partition and RF capped at the broker count', async () => {
-    const world = kafkaWorld({ brokers: 2, topics: new Set(['orders.placed', 'inventory.updated']) });
+    const world = kafkaWorld({ brokers: 2, topics: new Set(['orders.placed', 'inventory.updated', 'retailsync-orders', 'retailsync-inventory']) });
     const result = await runProbe(kafkaProbe(kafkaDeps(world)));
     assert.equal(result.status, 'pass', result.error ?? '');
     assert.equal(world.created.length, 1);
@@ -349,11 +349,11 @@ describe('Kafka probe', () => {
     const world = kafkaWorld({ topics: new Set([DIAGNOSTICS_TOPIC]) });
     const result = await runProbe(kafkaProbe(kafkaDeps(world)));
     assert.equal(result.status, 'warn');
-    assert.deepEqual(result.warnings, ['missing event topic(s): orders.placed, inventory.updated - run: npm run kafka:topics']);
+    assert.deepEqual(result.warnings, ['missing event topic(s): orders.placed, inventory.updated, retailsync-orders, retailsync-inventory - run: npm run kafka:topics']);
   });
 
   it('skips the round-trip with --no-roundtrip (read-only)', async () => {
-    const world = kafkaWorld({ topics: new Set(['orders.placed', 'inventory.updated']) });
+    const world = kafkaWorld({ topics: new Set(['orders.placed', 'inventory.updated', 'retailsync-orders', 'retailsync-inventory']) });
     const result = await runProbe(kafkaProbe(kafkaDeps(world, { roundTrip: false })));
     assert.equal(result.status, 'pass');
     assert.equal(world.sends, 0);
@@ -364,7 +364,7 @@ describe('Kafka probe', () => {
 
   it('fails with an actionable hint when the diagnostics topic cannot be created', async () => {
     const world = kafkaWorld({
-      topics: new Set(['orders.placed', 'inventory.updated']),
+      topics: new Set(['orders.placed', 'inventory.updated', 'retailsync-orders', 'retailsync-inventory']),
       createError: Object.assign(new Error('Topic authorization failed'), { type: 'TOPIC_AUTHORIZATION_FAILED' }),
     });
     const result = await runProbe(kafkaProbe(kafkaDeps(world)));

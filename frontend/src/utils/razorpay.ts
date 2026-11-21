@@ -9,12 +9,29 @@ export interface RazorpayOptions {
   productName: string;
   /** Line items for the owner's emailed invoice (the server takes the total from Razorpay). */
   invoice?: {
-    lines: { name: string; storeName: string; qty: number; unitPriceInr: number }[];
+    lines: { name: string; storeName: string; qty: number; unitPriceInr: number; storeId?: string; productId?: string }[];
     customerName?: string;
     customerEmail?: string;
   };
-  onSuccess: (paymentId: string) => void;
-  onFailure: (error: unknown) => void;
+  onSuccess: (result: PaymentResult) => void;
+  onFailure: (error: PaymentFailure) => void;
+}
+
+export type DeliveryStatus = 'sent' | 'skipped' | 'failed';
+
+export interface PaymentResult {
+  paymentId: string;
+  /** Amount Razorpay captured (null for demo payments or if the lookup failed). */
+  paidInr: number | null;
+  invoice: { owner: DeliveryStatus; buyer: DeliveryStatus } | null;
+  demo: boolean;
+}
+
+export interface PaymentFailure {
+  reason: 'dismissed' | 'out_of_stock' | 'error';
+  message?: string;
+  /** For out_of_stock: products that cannot be covered. */
+  items?: { storeId: string; productId: string; stock: number; requested: number }[];
 }
 
 
@@ -39,16 +56,21 @@ export async function openRazorpayCheckout(opts: RazorpayOptions) {
       amount: opts.amount,
       receipt: `${opts.storeSlug}_${Date.now()}`.slice(0, 40),
       notes: { store_slug: opts.storeSlug, product: opts.productName.slice(0, 256) },
+      lines: opts.invoice?.lines.flatMap((l) => (l.storeId && l.productId ? [{ storeId: l.storeId, productId: l.productId, qty: l.qty }] : [])),
     });
   } catch (err) {
-    return opts.onFailure(err);
+    return opts.onFailure({ reason: 'error', message: err instanceof Error ? err.message : undefined });
   }
 
   if (order.status === 503) {
-    setTimeout(() => opts.onSuccess('demo_payment_' + Date.now()), 1200);
+    setTimeout(() => opts.onSuccess({ paymentId: 'demo_payment_' + Date.now(), paidInr: null, invoice: null, demo: true }), 1200);
     return;
   }
-  if (order.status !== 201) return opts.onFailure(order.data);
+  if (order.status === 409) {
+    const err = (order.data as unknown as { error?: { message?: string; details?: { items?: PaymentFailure['items'] } } }).error;
+    return opts.onFailure({ reason: 'out_of_stock', message: err?.message, items: err?.details?.items });
+  }
+  if (order.status !== 201) return opts.onFailure({ reason: 'error' });
 
   const rzp = new Razorpay({
     key: order.data.keyId,
@@ -62,15 +84,15 @@ export async function openRazorpayCheckout(opts: RazorpayOptions) {
     theme: { color: '#1a1918' },
     handler: async (response: { razorpay_order_id: string; razorpay_payment_id: string; razorpay_signature: string }) => {
       try {
-        const verified = await post<{ paymentId: string }>('verify', { ...response, invoice: opts.invoice });
-        if (verified.status === 200) opts.onSuccess(verified.data.paymentId);
-        else opts.onFailure(verified.data);
-      } catch (err) {
-        opts.onFailure(err);
+        const verified = await post<{ paymentId: string; paidInr: number | null; invoice: PaymentResult['invoice'] }>('verify', { ...response, invoice: opts.invoice });
+        if (verified.status === 200) opts.onSuccess({ paymentId: verified.data.paymentId, paidInr: verified.data.paidInr ?? null, invoice: verified.data.invoice ?? null, demo: false });
+        else opts.onFailure({ reason: 'error' });
+      } catch {
+        opts.onFailure({ reason: 'error' });
       }
     },
     modal: { ondismiss: () => opts.onFailure({ reason: 'dismissed' }) },
   });
-  rzp.on('payment.failed', (resp: { error: unknown }) => opts.onFailure(resp.error));
+  rzp.on('payment.failed', (resp: { error?: { description?: string } }) => opts.onFailure({ reason: 'error', message: resp.error?.description }));
   rzp.open();
 }

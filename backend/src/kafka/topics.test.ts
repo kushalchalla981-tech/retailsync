@@ -65,9 +65,14 @@ function fakeAdmin(state: ClusterState) {
 }
 
 describe('topic specs', () => {
-  it('provisions exactly orders.placed and inventory.updated', () => {
-    assert.deepEqual(TOPICS, { ORDERS_PLACED: 'orders.placed', INVENTORY_UPDATED: 'inventory.updated' });
-    assert.deepEqual(TOPIC_SPECS.map((s) => s.topic), ['orders.placed', 'inventory.updated']);
+  it('provisions the pipeline and storefront topics', () => {
+    assert.deepEqual(TOPICS, {
+      ORDERS_PLACED: 'orders.placed',
+      INVENTORY_UPDATED: 'inventory.updated',
+      STOREFRONT_ORDERS: 'retailsync-orders',
+      STOREFRONT_INVENTORY: 'retailsync-inventory',
+    });
+    assert.deepEqual(TOPIC_SPECS.map((s) => s.topic), ['orders.placed', 'inventory.updated', 'retailsync-orders', 'retailsync-inventory']);
   });
 
   it('uses 3 partitions and 7-day delete retention', () => {
@@ -113,12 +118,14 @@ describe('ensureTopics', () => {
     assert.equal(result.brokerCount, 3);
     assert.equal(result.replicationFactor, 3);
     assert.equal(created.length, 1, 'single CreateTopics request');
-    assert.deepEqual(created[0]!.map((t) => t.topic), ['orders.placed', 'inventory.updated']);
+    assert.deepEqual(created[0]!.map((t) => t.topic), ['orders.placed', 'inventory.updated', 'retailsync-orders', 'retailsync-inventory']);
     assert.deepEqual(
       result.topics.map(({ topic, status, partitions: p, replicationFactor, warnings }) => [topic, status, p, replicationFactor, warnings]),
       [
         ['orders.placed', 'created', 3, 3, []],
         ['inventory.updated', 'created', 3, 3, []],
+        ['retailsync-orders', 'created', 3, 3, []],
+        ['retailsync-inventory', 'created', 3, 3, []],
       ],
     );
   });
@@ -129,20 +136,22 @@ describe('ensureTopics', () => {
       topics: new Map([
         ['orders.placed', partitions(3, 3)],
         ['inventory.updated', partitions(3, 3)],
+        ['retailsync-orders', partitions(3, 3)],
+        ['retailsync-inventory', partitions(3, 3)],
         ['unrelated', partitions(1, 3)],
       ]),
     };
     const { admin, created } = fakeAdmin(state);
     const result = await ensureTopics(admin);
     assert.equal(created.length, 0);
-    assert.deepEqual(result.topics.map((t) => t.status), ['exists', 'exists']);
+    assert.deepEqual(result.topics.map((t) => t.status), ['exists', 'exists', 'exists', 'exists']);
   });
 
   it('creates only the missing topic', async () => {
     const { admin, created } = fakeAdmin({ brokers: 3, topics: new Map([['orders.placed', partitions(3, 3)]]) });
     const result = await ensureTopics(admin);
-    assert.deepEqual(created[0]!.map((t) => t.topic), ['inventory.updated']);
-    assert.deepEqual(result.topics.map((t) => t.status), ['exists', 'created']);
+    assert.deepEqual(created[0]!.map((t) => t.topic), ['inventory.updated', 'retailsync-orders', 'retailsync-inventory']);
+    assert.deepEqual(result.topics.map((t) => t.status), ['exists', 'created', 'created', 'created']);
   });
 
   it('reports partition / replication drift and leaderless partitions on existing topics without altering them', async () => {
@@ -151,6 +160,8 @@ describe('ensureTopics', () => {
       topics: new Map([
         ['orders.placed', partitions(1, 1)],
         ['inventory.updated', partitions(3, 3, -1)],
+        ['retailsync-orders', partitions(3, 3)],
+        ['retailsync-inventory', partitions(3, 3)],
       ]),
     };
     const { admin, created } = fakeAdmin(state);
@@ -186,7 +197,7 @@ describe('ensureTopics', () => {
     const { admin } = fakeAdmin({ brokers: 3, topics: new Map(), createError: aggregate });
     await assert.rejects(ensureTopics(admin), (error: unknown) => {
       const message = (error as Error).message;
-      assert.match(message, /creating topics orders\.placed, inventory\.updated failed/);
+      assert.match(message, /creating topics orders\.placed, inventory\.updated, retailsync-orders, retailsync-inventory failed/);
       assert.match(message, /TOPIC_AUTHORIZATION_FAILED/);
       assert.match(message, /Aiven Console/);
       return true;

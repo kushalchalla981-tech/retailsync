@@ -9,6 +9,8 @@ import Fastify from 'fastify';
 
 import { registerErrorHandling } from '../http/contract.js';
 import { renderInvoice, type Invoice } from '../services/invoice-email.js';
+import { subscribeTelemetry, type TelemetryEvent } from '../telemetry/bus.js';
+import type { FakeResponder } from '../testing/fake-db.js';
 import { isValidSignature, paymentRoutes, type PaymentRouteOptions } from './payments.js';
 
 const SECRET = 'test_secret';
@@ -67,12 +69,12 @@ describe('payment invoices', () => {
     process.env.RAZORPAY_KEY_SECRET = saved.secret ?? '';
   });
 
-  const appWith = async (opts: PaymentRouteOptions) => {
+  const appWith = async (opts: Omit<PaymentRouteOptions, 'db'>, respond?: FakeResponder) => {
     process.env.RAZORPAY_KEY_ID = 'rzp_test_x';
     process.env.RAZORPAY_KEY_SECRET = SECRET;
     const a = Fastify({ logger: false });
     registerErrorHandling(a);
-    await a.register(paymentRoutes, { prefix: '/api', ...opts });
+    await a.register(paymentRoutes, { prefix: '/api', db: createFakeDatabase(respond ?? ((c) => (/storefront_payments/.test(c.text) ? [{ payment_id: PAY }] : undefined))), ...opts });
     return a;
   };
   const verify = (a: Awaited<ReturnType<typeof appWith>>) =>
@@ -95,11 +97,12 @@ describe('payment invoices', () => {
     const sent: Invoice[] = [];
     const a = await appWith({
       fetchOrder: async () => ({ id: ORDER, amount: 99700, amount_paid: 99700, currency: 'INR' }),
-      sendInvoice: async (inv) => { sent.push(inv); return 'sent'; },
+      sendInvoice: async (inv) => { sent.push(inv); return { owner: 'sent', buyer: 'sent' }; },
     });
     const res = await verify(a);
     assert.equal(res.statusCode, 200);
-    assert.equal(res.json().invoice, 'sent');
+    assert.deepEqual(res.json().invoice, { owner: 'sent', buyer: 'sent' });
+    assert.equal(res.json().paidInr, 997);
     assert.equal(sent[0]?.paidPaise, 99700);
     assert.equal(sent[0]?.customerEmail, 'shopper@example.com');
     await a.close();
@@ -113,7 +116,98 @@ describe('payment invoices', () => {
     const res = await verify(a);
     assert.equal(res.statusCode, 200);
     assert.equal(res.json().verified, true);
-    assert.equal(res.json().invoice, 'failed');
+    assert.equal(res.json().invoice.owner, 'failed');
+    await a.close();
+  });
+
+  it('renders a buyer receipt without owner-only notes', () => {
+    const inv = { orderId: ORDER, paymentId: PAY, paidPaise: 10000, currency: 'INR', lines, issuedAt: new Date(0), shortfalls: [{ name: 'Mug', missing: 1 }] };
+    const buyer = renderInvoice(inv, 'buyer');
+    assert.match(buyer.subject, /Your RetailSync receipt from Hearthware/);
+    assert.doesNotMatch(buyer.html, /Check this payment|Refund needed|GMV/);
+    assert.match(renderInvoice(inv, 'owner').html, /Refund needed:<\/b> 1 × Mug/);
+  });
+});
+
+describe('storefront stock at checkout', () => {
+  const ORDER = 'order_STK1', PAY = 'pay_STK1';
+  const line = { name: 'Mug', storeName: 'Hearthware', qty: 3, unitPriceInr: 449, storeId: 'store-1', productId: 'store-1-prod-1' };
+  const saved = { id: process.env.RAZORPAY_KEY_ID, secret: process.env.RAZORPAY_KEY_SECRET };
+  afterEach(() => {
+    process.env.RAZORPAY_KEY_ID = saved.id ?? '';
+    process.env.RAZORPAY_KEY_SECRET = saved.secret ?? '';
+  });
+  const setup = async (respond: FakeResponder) => {
+    process.env.RAZORPAY_KEY_ID = 'rzp_test_x';
+    process.env.RAZORPAY_KEY_SECRET = SECRET;
+    const db = createFakeDatabase(respond);
+    const a = Fastify({ logger: false });
+    registerErrorHandling(a);
+    await a.register(paymentRoutes, {
+      prefix: '/api',
+      db,
+      fetchOrder: async () => ({ id: ORDER, amount: 134700, amount_paid: 134700, currency: 'INR' }),
+      sendInvoice: async () => ({ owner: 'sent', buyer: 'skipped' }),
+    });
+    const verify = () =>
+      a.inject({ method: 'POST', url: '/api/payments/razorpay/verify', payload: { razorpay_order_id: ORDER, razorpay_payment_id: PAY, razorpay_signature: sign(ORDER, PAY), invoice: { lines: [line] } } });
+    return { a, db, verify };
+  };
+
+  it('locks, decrements and streams the new stock', async () => {
+    const seen: TelemetryEvent[] = [];
+    const stop = subscribeTelemetry((e) => seen.push(e));
+    const { a, db, verify } = await setup((c) =>
+      /storefront_payments/.test(c.text) ? [{ payment_id: PAY }] : /FOR UPDATE/.test(c.text) ? [{ store_id: 'store-1', product_id: 'store-1-prod-1', stock: 5 }] : undefined,
+    );
+    const res = await verify();
+    stop();
+    assert.equal(res.json().stock, 'committed');
+    const lock = db.calls.find((c) => /FOR UPDATE/.test(c.text))!;
+    assert.ok(lock.inTransaction);
+    const update = db.calls.find((c) => /UPDATE storefront_stock/.test(c.text))!;
+    assert.deepEqual(update.values, ['store-1', 'store-1-prod-1', 3]);
+    const dec = seen.find((e) => e.type === 'inventory.decrement')!;
+    assert.equal(dec.stockAfter, 2);
+    const order = seen.find((e) => e.type === 'order.placed')!;
+    assert.equal(order.totalInr, 1347);
+    assert.ok(!JSON.stringify(seen).includes('@'), 'no customer data on the public stream');
+    await a.close();
+  });
+
+  it('never takes more than is left, and reports the shortfall', async () => {
+    const { a, db, verify } = await setup((c) =>
+      /storefront_payments/.test(c.text) ? [{ payment_id: PAY }] : /FOR UPDATE/.test(c.text) ? [{ store_id: 'store-1', product_id: 'store-1-prod-1', stock: 1 }] : undefined,
+    );
+    const res = await verify();
+    assert.equal(res.json().stock, 'short');
+    assert.deepEqual(res.json().short, [{ storeId: 'store-1', productId: 'store-1-prod-1', missing: 2 }]);
+    assert.deepEqual(db.calls.find((c) => /UPDATE storefront_stock/.test(c.text))!.values[2], 1);
+    await a.close();
+  });
+
+  it('ignores a replayed verify (no second decrement or invoice)', async () => {
+    let invoices = 0;
+    process.env.RAZORPAY_KEY_ID = 'rzp_test_x';
+    process.env.RAZORPAY_KEY_SECRET = SECRET;
+    const db = createFakeDatabase(() => undefined); // payment row already exists
+    const a = Fastify({ logger: false });
+    registerErrorHandling(a);
+    await a.register(paymentRoutes, { prefix: '/api', db, sendInvoice: async () => { invoices++; return { owner: 'sent', buyer: 'sent' }; } });
+    const res = await a.inject({ method: 'POST', url: '/api/payments/razorpay/verify', payload: { razorpay_order_id: ORDER, razorpay_payment_id: PAY, razorpay_signature: sign(ORDER, PAY), invoice: { lines: [line] } } });
+    assert.equal(res.json().duplicate, true);
+    assert.equal(invoices, 0);
+    assert.ok(!db.calls.some((c) => /UPDATE storefront_stock/.test(c.text)));
+    await a.close();
+  });
+
+  it('refuses to create a payment order the stock cannot cover', async () => {
+    process.env.RAZORPAY_KEY_ID = 'rzp_test_x';
+    process.env.RAZORPAY_KEY_SECRET = SECRET;
+    const a = buildApp({ logLevel: 'silent', db: createFakeDatabase((c) => (/storefront_stock/.test(c.text) ? [{ store_id: 'store-1', product_id: 'store-1-prod-1', stock: 2 }] : undefined)) });
+    const res = await a.inject({ method: 'POST', url: '/api/payments/razorpay/order', payload: { amount: 10000, lines: [{ storeId: 'store-1', productId: 'store-1-prod-1', qty: 3 }] } });
+    assert.equal(res.statusCode, 409);
+    assert.equal(res.json().error.code, 'OUT_OF_STOCK');
     await a.close();
   });
 });

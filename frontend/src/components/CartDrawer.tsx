@@ -3,7 +3,8 @@ import { useUser } from '@clerk/react';
 import { X, Minus, Plus, Trash2, ShoppingCart, CheckCircle2, Loader2 } from 'lucide-react';
 import { useCart, MAX_QTY, CartItem } from '../context/CartContext';
 import { useCurrency } from '../context/CurrencyContext';
-import { openRazorpayCheckout } from '../utils/razorpay';
+import { openRazorpayCheckout, type PaymentFailure } from '../utils/razorpay';
+import { ReceiptModal, type Receipt } from './ReceiptModal';
 import { storeManager } from '../data/storeManager';
 import { ThunderLine } from './ThunderLine';
 
@@ -19,6 +20,13 @@ export const CartDrawer: React.FC = () => {
   const { user } = useUser();
   const [phase, setPhase] = useState<Phase>('cart');
   const [paymentId, setPaymentId] = useState('');
+  const [receipt, setReceipt] = useState<Receipt | null>(null);
+  const [failure, setFailure] = useState<PaymentFailure | null>(null);
+  const signedInEmail = user?.primaryEmailAddress?.emailAddress ?? '';
+  const [email, setEmail] = useState('');
+  const [emailTouched, setEmailTouched] = useState(false);
+  useEffect(() => { if (signedInEmail && !email) setEmail(signedInEmail); }, [signedInEmail, email]);
+  const emailValid = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim());
 
   const shippingInr = subtotalInr === 0 || subtotalInr >= FREE_SHIPPING_FROM_INR ? 0 : SHIPPING_INR;
   const totalInr = subtotalInr + shippingInr;
@@ -30,7 +38,8 @@ export const CartDrawer: React.FC = () => {
     return () => window.removeEventListener('keydown', onKey);
   }, [isOpen, phase, setOpen]);
 
-  if (!isOpen) return null;
+  const receiptModal = <ReceiptModal receipt={receipt} onClose={() => setReceipt(null)} />;
+  if (!isOpen) return receiptModal;
 
   const close = () => {
     if (phase === 'paying') return;
@@ -38,7 +47,7 @@ export const CartDrawer: React.FC = () => {
     if (phase !== 'cart') setPhase('cart');
   };
 
-  const recordOrders = (paid: CartItem[], id: string) => {
+  const recordOrders = (paid: CartItem[], id: string, buyerEmail: string) => {
     const byStore = new Map<string, CartItem[]>();
     paid.forEach((i) => byStore.set(i.storeId, [...(byStore.get(i.storeId) ?? []), i]));
     byStore.forEach((lines, storeId) => {
@@ -47,7 +56,7 @@ export const CartDrawer: React.FC = () => {
         storeId,
         storeName: lines[0].storeName,
         customerName: user?.fullName || 'Guest shopper',
-        customerEmail: user?.primaryEmailAddress?.emailAddress || 'guest@retailsync.app',
+        customerEmail: buyerEmail,
         customerCity: 'Bengaluru',
         items: lines.map((l) => ({ name: l.name, price: inr(l.priceInr), quantity: l.qty, emoji: l.emoji })),
         total: inr(lines.reduce((n, l) => n + l.priceInr * l.qty, 0)),
@@ -58,7 +67,11 @@ export const CartDrawer: React.FC = () => {
   };
 
   const checkout = () => {
+    if (!emailValid) { setEmailTouched(true); return; }
     const paid = items;
+    const buyerEmail = email.trim();
+    const lines = paid.map((i) => ({ name: i.name, storeName: i.storeName, qty: i.qty, unitPriceInr: i.priceInr, storeId: i.storeId, productId: i.productId }));
+    setFailure(null);
     setPhase('paying');
     const stores = [...new Set(paid.map((i) => i.storeSlug))];
     openRazorpayCheckout({
@@ -66,22 +79,35 @@ export const CartDrawer: React.FC = () => {
       storeSlug: stores.length === 1 ? stores[0] : 'multi-store',
       amount: totalInr * 100,
       productName: `${count} item${count === 1 ? '' : 's'} from ${stores.length} store${stores.length === 1 ? '' : 's'}`,
-      invoice: {
-        lines: paid.map((i) => ({ name: i.name, storeName: i.storeName, qty: i.qty, unitPriceInr: i.priceInr })),
-        customerName: user?.fullName || undefined,
-        customerEmail: user?.primaryEmailAddress?.emailAddress || undefined,
-      },
-      onSuccess: (id) => {
-        recordOrders(paid, id);
-        setPaymentId(id);
+      invoice: { lines, customerName: user?.fullName || undefined, customerEmail: buyerEmail },
+      onSuccess: (r) => {
+        recordOrders(paid, r.paymentId, buyerEmail);
+        setPaymentId(r.paymentId);
+        setReceipt({
+          paymentId: r.paymentId,
+          issuedAt: new Date(),
+          customerName: user?.fullName || undefined,
+          customerEmail: buyerEmail,
+          lines,
+          shippingInr,
+          totalInr: r.paidInr ?? totalInr,
+          verified: r.paidInr !== null,
+          demo: r.demo,
+          email: r.invoice,
+        });
         clear();
         setPhase('done');
       },
-      onFailure: () => setPhase('failed'),
+      onFailure: (f) => {
+        setFailure(f);
+        setPhase(f.reason === 'dismissed' ? 'cart' : 'failed');
+      },
     });
   };
 
   return (
+    <>
+    {receiptModal}
     <div className="fixed inset-0 z-[110] flex justify-end">
       <div className="absolute inset-0 bg-[#1a1918]/60 backdrop-blur-sm animate-fadeIn" onClick={close} />
       <aside
@@ -117,6 +143,9 @@ export const CartDrawer: React.FC = () => {
             <h4 className="font-black text-xl text-[#1a1918]">Payment successful</h4>
             <p className="text-sm text-[#5a534d]">Your order is with the store{paymentId.startsWith('demo_') ? ' (demo payment)' : ''}.</p>
             <p className="font-mono text-xs break-all bg-[#f4f0ed] border-2 border-[#1a1918] rounded-xl p-3 w-full">{paymentId}</p>
+            {!receipt && (
+              <p className="text-xs text-[#786f66]">Receipt closed. Your payment ID is above.</p>
+            )}
             <button onClick={close} className="bg-[#1a1918] text-white px-6 py-2.5 rounded-full font-mono text-xs uppercase tracking-wider font-black hover:bg-[#ff5c35] transition-colors shadow-pop">
               Keep shopping
             </button>
@@ -125,8 +154,21 @@ export const CartDrawer: React.FC = () => {
 
         {phase === 'failed' && (
           <div className="flex-1 flex flex-col items-center justify-center gap-4 p-6 text-center">
-            <h4 className="font-black text-lg text-[#1a1918]">Payment didn't go through</h4>
-            <p className="text-sm text-[#5a534d]">Nothing was charged. Your cart is still here.</p>
+            <h4 className="font-black text-lg text-[#1a1918]">{failure?.reason === 'out_of_stock' ? 'Some items just sold out' : "Payment didn't go through"}</h4>
+            <p className="text-sm text-[#5a534d]">
+              {failure?.reason === 'out_of_stock'
+                ? 'Another shopper got there first. Lower the quantity or remove the item, then try again. Nothing was charged.'
+                : failure?.message ? `${failure.message} Nothing was charged.` : 'Nothing was charged. Your cart is still here.'}
+            </p>
+            {failure?.items?.length ? (
+              <ul className="font-mono text-xs text-left w-full bg-[#f4f0ed] border-2 border-[#1a1918] rounded-xl p-3 space-y-1">
+                {failure.items.map((x) => (
+                  <li key={`${x.storeId}/${x.productId}`}>
+                    {items.find((i) => i.productId === x.productId && i.storeId === x.storeId)?.name ?? x.productId}: {x.stock > 0 ? `only ${x.stock} left` : 'sold out'}
+                  </li>
+                ))}
+              </ul>
+            ) : null}
             <button onClick={() => setPhase('cart')} className="bg-[#ff5c35] text-white px-6 py-2.5 rounded-full font-mono text-xs uppercase tracking-wider font-black hover:bg-[#1a1918] transition-colors shadow-pop">
               Back to cart
             </button>
@@ -183,6 +225,24 @@ export const CartDrawer: React.FC = () => {
               <div className="h-px bg-[#1a1918]/15" />
               <div className="flex justify-between text-[#1a1918] font-black text-base"><span>Total</span><span>{format(totalInr)}</span></div>
               {currency !== 'INR' && <p className="text-xs text-[#786f66]">Charged in INR: {inr(totalInr)}. Converted prices are indicative.</p>}
+              <label className="block pt-2">
+                <span className="text-xs font-black uppercase tracking-wider text-[#1a1918]">Receipt email *</span>
+                <input
+                  type="email"
+                  required
+                  autoComplete="email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  onBlur={() => setEmailTouched(true)}
+                  placeholder="you@example.com"
+                  aria-invalid={emailTouched && !emailValid}
+                  aria-describedby="receipt-email-hint"
+                  className={`mt-1 w-full bg-white border-2 rounded-xl px-3 py-2 text-sm font-sans focus:outline-none focus:ring-2 focus:ring-[#ff5c35] ${emailTouched && !emailValid ? 'border-[#c0392b]' : 'border-[#1a1918]'}`}
+                />
+                <span id="receipt-email-hint" className={`block mt-1 text-xs ${emailTouched && !emailValid ? 'text-[#c0392b]' : 'text-[#786f66]'}`}>
+                  {emailTouched && !emailValid ? 'Enter a valid email for your receipt.' : 'We email your tax invoice here.'}
+                </span>
+              </label>
               <button
                 onClick={checkout}
                 className="w-full mt-2 flex items-center justify-center gap-2 bg-[#1a1918] text-white py-3.5 rounded-xl text-sm uppercase tracking-widest font-black border-2 border-[#1a1918] shadow-pop hover:-translate-y-0.5 active:translate-y-0 transition-all hover:bg-[#ff5c35]"
@@ -196,5 +256,6 @@ export const CartDrawer: React.FC = () => {
         )}
       </aside>
     </div>
+    </>
   );
 };

@@ -26,6 +26,7 @@ import { closePgPool, withTransaction } from '../services/postgres.js';
 export const MIGRATION_FILES: readonly { id: string; file: string }[] = [
   { id: '0001_initial_schema', file: 'schema.sql' },
   { id: '0002_merchant_stores', file: '0002_merchant_stores.sql' },
+  { id: '0003_storefront_stock', file: '0003_storefront_stock.sql' },
 ];
 
 /** Arbitrary constant key for pg_advisory_xact_lock ("RS" "MIGR" in hex). */

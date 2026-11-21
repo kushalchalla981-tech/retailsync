@@ -1,5 +1,6 @@
 import { DEMO_STORES, DemoStore } from './stores';
 import { API_BASE } from '../utils/api';
+import { onReconnect, onTelemetry, type TelemetryEvent } from '../utils/telemetry';
 
 export interface ProductItem {
   id: string;
@@ -51,7 +52,7 @@ export const STOCK_BASELINE = 23;
 export const STOCK_TOPLINE = 129;
 export const STOCK_TIERS = [23, 38, 54, 72, 88, 105, 118, 129];
 
-const toProducts = (catalog: ProductItem[]) => catalog.map(c => ({ name: c.name, price: c.price, emoji: c.emoji, image: c.image }));
+const toProducts = (catalog: ProductItem[]) => catalog.map(c => ({ id: c.id, name: c.name, price: c.price, emoji: c.emoji, image: c.image, stock: c.stock }));
 
 function demoCatalog(s: DemoStore, idx: number): ProductItem[] {
   return s.products.map((p, pIdx) => ({
@@ -217,6 +218,87 @@ class StoreManager {
   constructor() {
     this.load();
     void this.refresh();
+    // v1.05: live stock and orders from every device (PostgreSQL commit -> SSE).
+    onTelemetry(e => this.applyLive(e));
+    onReconnect(() => void this.refreshStock());
+  }
+
+  /** Overwrite catalog stock with the server's live numbers. */
+  private applyStock(rows: { storeId: string; productId: string; stock: number }[]) {
+    if (!rows.length) return;
+    const byStore = new Map<string, Map<string, number>>();
+    rows.forEach(r => {
+      if (!byStore.has(r.storeId)) byStore.set(r.storeId, new Map());
+      byStore.get(r.storeId)!.set(r.productId, r.stock);
+    });
+    let changed = false;
+    this.stores = this.stores.map(s => {
+      const live = byStore.get(s.id);
+      if (!live) return s;
+      let storeChanged = false;
+      const catalog = s.catalog.map(p => {
+        const n = live.get(p.id);
+        if (n === undefined || n === p.stock) return p;
+        storeChanged = true;
+        return { ...p, stock: n };
+      });
+      changed ||= storeChanged;
+      return storeChanged ? { ...s, catalog, products: toProducts(catalog) } : s;
+    });
+    if (changed) this.save();
+  }
+
+  async refreshStock() {
+    try {
+      const res = await fetch(`${API_BASE}/api/stock`);
+      if (!res.ok) return;
+      const { items } = (await res.json()) as { items: { storeId: string; productId: string; stock: number }[] };
+      this.applyStock(items);
+    } catch {
+      // offline: keep what we have
+    }
+  }
+
+  private applyLive(e: TelemetryEvent) {
+    if ((e.type === 'inventory.decrement' || e.type === 'stock.updated') && e.storeId && e.productId && typeof e.stockAfter === 'number') {
+      this.applyStock([{ storeId: e.storeId, productId: e.productId, stock: e.stockAfter }]);
+    }
+    if (e.type === 'order.placed' && e.items?.length && e.paymentId) {
+      // Orders placed on other devices; the buyer's own device already recorded them.
+      const byStore = new Map<string, NonNullable<TelemetryEvent['items']>>();
+      e.items.forEach(i => byStore.set(i.storeId, [...(byStore.get(i.storeId) ?? []), i]));
+      let added = false;
+      byStore.forEach((lines, storeId) => {
+        const store = this.getStore(storeId);
+        if (!store || this.orders.some(o => o.paymentId === e.paymentId && o.storeId === storeId)) return;
+        const inr = (n: number) => `₹${n.toLocaleString('en-IN')}`;
+        this.orders.unshift({
+          id: `ord-${e.paymentId}-${storeId}`,
+          orderNumber: `#RS-${e.paymentId!.slice(-4).toUpperCase()}`,
+          storeId,
+          storeName: store.name,
+          customerName: 'Online shopper',
+          customerEmail: '—',
+          customerCity: '—',
+          items: lines.map(l => ({ name: l.name, price: inr(l.unitPriceInr), quantity: l.qty, emoji: store.catalog.find(p => p.id === l.productId)?.emoji ?? '🛍️' })),
+          total: inr(lines.reduce((n, l) => n + l.unitPriceInr * l.qty, 0)),
+          status: 'Processing',
+          paymentId: e.paymentId!,
+          createdAt: 'Just now',
+        });
+        added = true;
+      });
+      if (added) this.saveOrders();
+    }
+  }
+
+  /** Persist a stock level server-side (owner-only; demo stores need the platform owner). */
+  private pushStock(storeId: string, productId: string, stock: number) {
+    this.lastError = null;
+    this.api('PUT', `/stock/${encodeURIComponent(storeId)}/${encodeURIComponent(productId)}`, { stock }).catch(e => {
+      this.fail(e);
+      void this.refreshStock();
+    });
   }
 
   private load() {
@@ -306,6 +388,7 @@ class StoreManager {
       const { items } = (await res.json()) as { items: ExtendedStore[] };
       this.stores = [...items.map(normalize), ...this.stores.filter(s => !isRemote(s.id))];
       this.save();
+      await this.refreshStock();
     } catch {
       // offline: keep cached stores
     }
@@ -404,7 +487,8 @@ class StoreManager {
       return { ...s, catalog: updatedCatalog, products: toProducts(updatedCatalog) };
     });
     this.save();
-    this.pushRemote(storeId);
+    if (isRemote(storeId)) this.pushRemote(storeId);
+    else this.pushStock(storeId, newId, clampedStock);
   }
 
   updateProductStock(storeId: string, productId: string, newStock: number) {
@@ -412,10 +496,10 @@ class StoreManager {
     this.stores = this.stores.map(s => {
       if (s.id !== storeId) return s;
       const updatedCatalog = s.catalog.map(p => p.id === productId ? { ...p, stock: clampedStock } : p);
-      return { ...s, catalog: updatedCatalog };
+      return { ...s, catalog: updatedCatalog, products: toProducts(updatedCatalog) };
     });
     this.save();
-    this.pushRemote(storeId);
+    this.pushStock(storeId, productId, clampedStock);
   }
 
   deleteProduct(storeId: string, productId: string) {
@@ -443,6 +527,8 @@ class StoreManager {
       id: `ord-${Date.now()}`,
       createdAt: 'Just now'
     };
+    // The live stream may have recorded this payment already (without customer details).
+    this.orders = this.orders.filter(o => !(o.paymentId === order.paymentId && o.storeId === order.storeId));
     this.orders.unshift(order);
     this.saveOrders();
     return order;

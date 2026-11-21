@@ -64,8 +64,8 @@ export const CustomizeStore: React.FC<CustomizeStoreProps> = ({ store, onStoreUp
     <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 animate-fadeIn">
       {/* Left Column: Customization Controls (7 cols) */}
       <form onSubmit={handleSaveChanges} className="lg:col-span-7 space-y-6">
-        {/* Header */}
-        <div className="bg-[#fdfaf6] p-5 rounded-2xl border-3 border-[#1a1918] shadow-pop">
+        {/* Header (sticky so Save stays reachable at any scroll depth) */}
+        <div className="sticky top-0 z-20 bg-[#fdfaf6] p-5 rounded-2xl border-3 border-[#1a1918] shadow-pop">
           <div className="flex items-center justify-between">
             <div>
               <div className="flex items-center gap-2">
@@ -279,7 +279,7 @@ export const CustomizeStore: React.FC<CustomizeStoreProps> = ({ store, onStoreUp
 
       {/* Right Column: Live Storefront Preview (5 cols) - Mirroring StoreForge HTML */}
       <div className="lg:col-span-5 space-y-4">
-        <div className="sticky top-6">
+        <div className="lg:sticky lg:top-0 lg:max-h-[calc(100dvh-9rem)] lg:overflow-y-auto overscroll-contain">
           <div className="flex items-center justify-between mb-2 px-1">
             <span className="font-mono text-xs font-black uppercase text-[#1a1918] flex items-center gap-1.5">
               <Eye className="w-4 h-4 text-[#ff5c35]" />

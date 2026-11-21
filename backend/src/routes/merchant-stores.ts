@@ -17,6 +17,7 @@ import { z } from 'zod';
 import { requireUser, type TokenVerifier } from '../http/clerk-auth.js';
 import { AppError, notFound, parseInput } from '../http/contract.js';
 import type { Database } from '../store/db.js';
+import { seedStock, stockByStore } from '../store/storefront-stock.js';
 
 const MAX_STORES_PER_OWNER = 10;
 const BODY_LIMIT = 2 * 1024 * 1024; // logos/banners may be data URLs (≤500KB / ≤1MB client-side)
@@ -45,8 +46,12 @@ const idParam = z.object({ id: z.string().regex(/^ms_[0-9a-f-]{36}$/, 'Expected 
 
 interface Row { id: string; owner_id: string; data: Record<string, unknown>; created_at: Date }
 
-const toStore = (r: Row) => ({
+/** Live stock (storefront_stock) overrides the stock saved in the document. */
+const toStore = (r: Row, live?: Map<string, number>) => ({
   ...r.data,
+  ...(live && Array.isArray(r.data.catalog)
+    ? { catalog: (r.data.catalog as { id: string; stock: number }[]).map((p) => (live.has(p.id) ? { ...p, stock: live.get(p.id)! } : p)) }
+    : {}),
   id: r.id,
   ownerId: r.owner_id,
   createdDate: new Date(r.created_at).toISOString(),
@@ -61,7 +66,8 @@ export interface MerchantStoreRoutesOptions {
 export const merchantStoreRoutes: FastifyPluginAsync<MerchantStoreRoutesOptions> = async (app, { db, verifier }) => {
   app.get('/stores', async () => {
     const { rows } = await db.query<Row>('SELECT id, owner_id, data, created_at FROM merchant_stores ORDER BY created_at DESC LIMIT 500');
-    return { items: rows.map(toStore) };
+    const live = await stockByStore(db, rows.map((r) => r.id));
+    return { items: rows.map((r) => toStore(r, live.get(r.id))) };
   });
 
   app.post('/stores', { bodyLimit: BODY_LIMIT }, async (request, reply) => {
@@ -80,6 +86,7 @@ export const merchantStoreRoutes: FastifyPluginAsync<MerchantStoreRoutesOptions>
         'INSERT INTO merchant_stores (id, owner_id, data) VALUES ($1, $2, $3) RETURNING id, owner_id, data, created_at',
         [`ms_${randomUUID()}`, user.userId, JSON.stringify(data)],
       );
+      await seedStock(tx, inserted.rows[0]!.id, catalogOf(data));
       return inserted.rows[0]!;
     });
     return reply.code(201).send(toStore(store));
@@ -97,7 +104,9 @@ export const merchantStoreRoutes: FastifyPluginAsync<MerchantStoreRoutesOptions>
       [id, JSON.stringify(data), user.userId, user.isPlatformOwner],
     );
     if (!rows[0]) await assertExists(id);
-    return toStore(rows[0]!);
+    await seedStock(db, id, catalogOf(data)); // new products only; live stock is changed via /api/stock
+    const live = await stockByStore(db, [id]);
+    return toStore(rows[0]!, live.get(id));
   });
 
   app.delete('/stores/:id', async (request, reply) => {
@@ -105,8 +114,13 @@ export const merchantStoreRoutes: FastifyPluginAsync<MerchantStoreRoutesOptions>
     const { id } = parseInput(idParam, request.params, 'params');
     const { rowCount } = await db.query('DELETE FROM merchant_stores WHERE id = $1 AND (owner_id = $2 OR $3)', [id, user.userId, user.isPlatformOwner]);
     if (!rowCount) await assertExists(id);
+    await db.query('DELETE FROM storefront_stock WHERE store_id = $1', [id]);
     return reply.code(204).send();
   });
+
+  function catalogOf(data: Record<string, unknown>) {
+    return (data.catalog as { id: string; stock: number }[]).map((p) => ({ id: p.id, stock: p.stock }));
+  }
 
   /** After a no-op write: 404 if the store is missing, otherwise the caller is not its owner. */
   async function assertExists(id: string): Promise<never> {

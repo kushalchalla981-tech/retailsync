@@ -1,5 +1,7 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { X, Store, Database, Zap, Search, ShieldCheck, GitBranch, ExternalLink } from 'lucide-react';
+import { ServiceLedgerModal } from './ServiceLedgerModal';
+import type { Service } from '../utils/telemetry';
 import { ThunderLine } from './ThunderLine';
 import { sound } from '../utils/sound';
 
@@ -11,7 +13,14 @@ interface AboutModalProps {
   onClose: () => void;
 }
 
+const CARDS: { id: Service; name: string; icon: React.ReactNode; glow: string; text: React.ReactNode }[] = [
+  { id: 'postgres', name: 'PostgreSQL', glow: '#ff5c35', icon: <Database className="w-5 h-5 text-[#ff5c35]" />, text: <>Pessimistic row-locking (<code>SELECT ... FOR UPDATE</code>) guarantees 0% oversell during flash sales.</> },
+  { id: 'kafka', name: 'Apache Kafka', glow: '#ffd600', icon: <Zap className="w-5 h-5 text-[#ffd600]" />, text: 'Real-time event streaming for orders, inventory updates, and live cross-service telemetry.' },
+  { id: 'opensearch', name: 'OpenSearch', glow: '#00e5ff', icon: <Search className="w-5 h-5 text-[#00e5ff]" />, text: 'Typo-tolerant fuzzy product search, kept in sync with stock by Kafka consumers.' },
+];
+
 export const AboutModal: React.FC<AboutModalProps> = ({ isOpen, onClose }) => {
+  const [ledger, setLedger] = useState<Service | null>(null);
   if (!isOpen) return null;
 
   return (
@@ -56,43 +65,26 @@ export const AboutModal: React.FC<AboutModalProps> = ({ isOpen, onClose }) => {
             </p>
           </div>
 
-          {/* 3 Services Grid */}
+          {/* 3 Services Grid: each opens its live ledger */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-            <div className="bg-[#f0e5d8] rounded-2xl p-4 border-2 border-[#1a1918] shadow-pop">
-              <div className="flex items-center gap-2 mb-2">
-                <Database className="w-5 h-5 text-[#ff5c35]" />
-                <h4 className="font-mono text-xs font-black uppercase tracking-wider text-[#1a1918]">
-                  PostgreSQL
-                </h4>
-              </div>
-              <p className="text-xs text-[#524b44] leading-relaxed">
-                Pessimistic row-locking (<code>SELECT ... FOR UPDATE</code>) guarantees 0% oversell during flash sales.
-              </p>
-            </div>
-
-            <div className="bg-[#f0e5d8] rounded-2xl p-4 border-2 border-[#1a1918] shadow-pop">
-              <div className="flex items-center gap-2 mb-2">
-                <Zap className="w-5 h-5 text-[#ffd600]" />
-                <h4 className="font-mono text-xs font-black uppercase tracking-wider text-[#1a1918]">
-                  Apache Kafka
-                </h4>
-              </div>
-              <p className="text-xs text-[#524b44] leading-relaxed">
-                Real-time event streaming for orders, inventory updates, and live cross-service telemetry.
-              </p>
-            </div>
-
-            <div className="bg-[#f0e5d8] rounded-2xl p-4 border-2 border-[#1a1918] shadow-pop">
-              <div className="flex items-center gap-2 mb-2">
-                <Search className="w-5 h-5 text-[#00e5ff]" />
-                <h4 className="font-mono text-xs font-black uppercase tracking-wider text-[#1a1918]">
-                  OpenSearch
-                </h4>
-              </div>
-              <p className="text-xs text-[#524b44] leading-relaxed">
-                Sub-100ms typo-tolerant fuzzy product search synchronized automatically via Kafka consumers.
-              </p>
-            </div>
+            {CARDS.map((c) => (
+              <button
+                key={c.id}
+                type="button"
+                onClick={() => { sound.playWhoosh(0.6); setLedger(c.id); }}
+                className="group text-left bg-[#f0e5d8] rounded-2xl p-4 border-2 border-[#1a1918] shadow-pop transition-all hover:-translate-y-1 focus-visible:-translate-y-1 focus:outline-none"
+                style={{ ['--glow' as string]: c.glow }}
+              >
+                <div className="flex items-center gap-2 mb-2">
+                  {c.icon}
+                  <h4 className="font-mono text-xs font-black uppercase tracking-wider text-[#1a1918]">{c.name}</h4>
+                </div>
+                <p className="text-xs text-[#524b44] leading-relaxed">{c.text}</p>
+                <span className="mt-3 inline-block font-mono text-[10px] font-black uppercase tracking-wider px-2 py-1 rounded-full bg-[#1a1918] text-[#fdfaf6] group-hover:shadow-[0_0_14px_var(--glow)] group-focus-visible:shadow-[0_0_14px_var(--glow)] transition-shadow">
+                  Click to view live ledger ↗
+                </span>
+              </button>
+            ))}
           </div>
 
           {/* Quick Guide */}
@@ -135,6 +127,7 @@ export const AboutModal: React.FC<AboutModalProps> = ({ isOpen, onClose }) => {
           </div>
         </div>
       </div>
+      <ServiceLedgerModal service={ledger} onClose={() => setLedger(null)} />
     </div>
   );
 };

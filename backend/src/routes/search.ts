@@ -10,6 +10,7 @@ import { parseInput } from '../http/contract.js';
 import { PRODUCTS_ALIAS, type ProductDocument } from '../search/mappings.js';
 import { getOpenSearch } from '../services/opensearch.js';
 import type { Product } from '../store/catalog.js';
+import { emitTelemetry } from '../telemetry/bus.js';
 
 const searchQuery = z.object({
   q: z.string().trim().max(200).default(''),
@@ -97,9 +98,17 @@ export const searchRoutes: FastifyPluginAsync = async (app) => {
           key: name === 'price' ? `${b.from ?? 0}-${b.to ?? ''}` : String(b.key),
           count: b.doc_count,
         }));
+    const total = typeof body.hits.total === 'number' ? body.hits.total : body.hits.total.value;
+    // The query text is not logged: the ledger stream is public.
+    emitTelemetry({
+      service: 'opensearch',
+      type: 'query',
+      message: input.q ? `Fuzzy multi_match (fuzziness AUTO, edge n-gram autocomplete): ${total} hit${total === 1 ? '' : 's'}` : `Browse query: ${total} hit${total === 1 ? '' : 's'}`,
+      latencyMs: body.took,
+    });
     return {
       items: body.hits.hits.map((hit) => toProduct(hit._source)),
-      total: typeof body.hits.total === 'number' ? body.hits.total : body.hits.total.value,
+      total,
       tookMs: body.took,
       facets: { category: facet('category'), city: facet('city'), price: facet('price') },
     };

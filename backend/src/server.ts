@@ -2,7 +2,7 @@
  * Process entry point: validate configuration, start Fastify, shut down cleanly.
  */
 import { buildApp } from './app.js';
-import { kafkaOrderEventSink, startPipeline } from './events/kafka-pipeline.js';
+import { kafkaOrderEventSink, kafkaStorefrontEventSink, startPipeline } from './events/kafka-pipeline.js';
 import { pgDatabase } from './store/db.js';
 import { ConfigError, describeConfig, getConfig, loadDotEnv, type AppConfig } from './config.js';
 
@@ -29,7 +29,7 @@ let stopPipeline: () => Promise<void> = async () => {};
 async function main(): Promise<void> {
   const config = loadConfigOrExit();
   const db = pgDatabase();
-  const app = buildApp({ logLevel: config.server.logLevel, db, orderEvents: kafkaOrderEventSink });
+  const app = buildApp({ logLevel: config.server.logLevel, db, orderEvents: kafkaOrderEventSink, storefrontEvents: kafkaStorefrontEventSink });
 
   app.log.info({ envFile: loadDotEnv() ?? null, config: describeConfig(config) }, 'configuration validated');
 

@@ -23,7 +23,9 @@ import { createConsumer, getProducer } from '../services/kafka.js';
 import { getOpenSearch } from '../services/opensearch.js';
 import type { Queryable } from '../store/db.js';
 import { emitTelemetry } from '../telemetry/bus.js';
+import { TOPICS } from '../kafka/topics.js';
 import type { OrderEventSink, OrderPlacedEvent } from './order-events.js';
+import type { StorefrontEventSink, StorefrontOrderEvent, StorefrontStockEvent } from './storefront-events.js';
 
 export const ORDERS_TOPIC = 'orders.placed';
 export const INVENTORY_TOPIC = 'inventory.updated';
@@ -69,6 +71,38 @@ export const kafkaOrderEventSink: OrderEventSink = {
       latencyMs: Math.round(performance.now() - started),
       orderId: event.orderId,
     });
+  },
+};
+
+async function produce(topic: string, messages: { key: string; value: string }[], describe: string, extra: Partial<Parameters<typeof emitTelemetry>[0]> = {}) {
+  if (!messages.length) return;
+  const started = performance.now();
+  const producer = await getProducer();
+  const [meta] = await producer.send({ topic, messages });
+  emitTelemetry({
+    service: 'kafka',
+    type: 'produce',
+    message: `Published ${messages.length} message${messages.length === 1 ? '' : 's'} to ${topic}: ${describe}`,
+    topic,
+    partition: meta?.partition,
+    offset: meta?.baseOffset,
+    latencyMs: Math.round(performance.now() - started),
+    ...extra,
+  });
+}
+
+/** Storefront checkout and merchant stock edits -> retailsync-orders / retailsync-inventory. */
+export const kafkaStorefrontEventSink: StorefrontEventSink = {
+  async orderPlaced(event) {
+    await produce(TOPICS.STOREFRONT_ORDERS, [{ key: event.orderId, value: JSON.stringify(event) }], `order ${event.orderId}`, { orderId: event.orderId });
+  },
+  async stockChanged(events) {
+    await produce(
+      TOPICS.STOREFRONT_INVENTORY,
+      events.map((e) => ({ key: `${e.storeId}/${e.productId}`, value: JSON.stringify(e) })),
+      events.length === 1 ? `${events[0]!.productId} -> ${events[0]!.stockAfter}` : 'stock levels',
+      events.length === 1 ? { storeId: events[0]!.storeId, productId: events[0]!.productId, stockAfter: events[0]!.stockAfter } : {},
+    );
   },
 };
 
@@ -163,6 +197,15 @@ export async function startPipeline(db: Queryable, log: Logger): Promise<() => P
   };
   await run('retailsync-inventory', ORDERS_TOPIC, (value, meta) => onOrderPlaced(db, JSON.parse(value) as OrderPlacedEvent, meta));
   await run('retailsync-search-sync', INVENTORY_TOPIC, (value) => onInventoryUpdated(db, JSON.parse(value) as InventoryUpdatedEvent));
+  // Storefront ledger consumers: confirm delivery and measure end-to-end lag.
+  await run('retailsync-storefront-ledger', TOPICS.STOREFRONT_ORDERS, async (value, meta) => {
+    const e = JSON.parse(value) as StorefrontOrderEvent;
+    emitTelemetry({ service: 'kafka', type: 'consume', message: `Ledger consumer received order ${e.orderId}`, topic: TOPICS.STOREFRONT_ORDERS, partition: meta.partition, offset: meta.offset, latencyMs: Date.now() - Date.parse(e.placedAt), orderId: e.orderId });
+  });
+  await run('retailsync-storefront-stock', TOPICS.STOREFRONT_INVENTORY, async (value, meta) => {
+    const e = JSON.parse(value) as StorefrontStockEvent;
+    emitTelemetry({ service: 'kafka', type: 'consume', message: `Stock consumer received ${e.productId} -> ${e.stockAfter}`, topic: TOPICS.STOREFRONT_INVENTORY, partition: meta.partition, offset: meta.offset, latencyMs: Date.now() - Date.parse(e.at), storeId: e.storeId, productId: e.productId, stockAfter: e.stockAfter });
+  });
   return async () => {
     await Promise.allSettled(consumers.map((c) => c.disconnect()));
   };

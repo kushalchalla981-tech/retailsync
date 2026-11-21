@@ -107,4 +107,28 @@ describe('merchant store routes', () => {
     assert.equal(res.statusCode, 404);
     await app.close();
   });
+
+  it('lets only the owner set stock, and only the platform owner for demo stores', async () => {
+    const db = createFakeDatabase((c) => (/SELECT owner_id/.test(c.text) ? [{ owner_id: 'user_a' }] : undefined));
+    const app = buildApp({ logLevel: 'silent', db, verifier: stub });
+    const put = (who: string, store: string) => app.inject({ method: 'PUT', url: `/api/stock/${store}/p1`, headers: { authorization: `Bearer ${who}` }, payload: { stock: 7 } });
+    assert.equal((await put('user_b', ID)).statusCode, 403);
+    assert.equal((await put('user_a', ID)).statusCode, 200);
+    assert.equal((await put('user_a', 'store-1')).statusCode, 403);
+    assert.equal((await put('user_3MPoGBbBQ4HVZD7NBfbGqH3CBY5', 'store-1')).statusCode, 200);
+    assert.equal(db.calls.filter((c) => /INSERT INTO storefront_stock/.test(c.text)).length, 2);
+    await app.close();
+  });
+
+  it('merges live stock into listed stores', async () => {
+    const db = createFakeDatabase((c) =>
+      /FROM merchant_stores/.test(c.text)
+        ? [{ ...row('user_a'), data: { name: 'Moss', catalog: [{ id: 'p1', stock: 50 }] } }]
+        : /storefront_stock/.test(c.text) ? [{ store_id: ID, product_id: 'p1', stock: 4 }] : undefined,
+    );
+    const app = buildApp({ logLevel: 'silent', db, verifier: stub });
+    const res = await app.inject({ method: 'GET', url: '/api/stores' });
+    assert.equal(res.json().items[0].catalog[0].stock, 4);
+    await app.close();
+  });
 });

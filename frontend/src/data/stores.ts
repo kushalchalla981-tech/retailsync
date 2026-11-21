@@ -3,6 +3,9 @@ export interface StoreProduct {
   price: string;   // INR, e.g. "₹8,999"
   emoji: string;
   image?: string;  // product photo URL
+  /** Catalog product id and live stock (set for storeManager stores). */
+  id?: string;
+  stock?: number;
 }
 
 const img = (id: string) => `https://images.unsplash.com/photo-${id}?w=600&h=600&fit=crop&q=75&auto=format`;

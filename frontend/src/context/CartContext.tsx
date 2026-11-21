@@ -3,6 +3,8 @@ import { parseInr } from '../utils/currency';
 
 export interface CartItem {
   storeId: string;
+  /** Catalog product id, used to reserve live stock at checkout (absent on carts saved before v1.05). */
+  productId?: string;
   storeName: string;
   storeSlug: string;
   storeColor: string;

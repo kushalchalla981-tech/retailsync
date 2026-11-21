@@ -17,6 +17,12 @@ export interface TelemetryEvent {
   productId?: string;
   sku?: string;
   stockAfter?: number;
+  /** Storefront events (v1.05): which shop, stock change and order summary. No customer data: the stream is public. */
+  storeId?: string;
+  delta?: number;
+  paymentId?: string;
+  totalInr?: number;
+  items?: { storeId: string; productId?: string; name: string; qty: number; unitPriceInr: number }[];
 }
 
 const CAPACITY = 300;

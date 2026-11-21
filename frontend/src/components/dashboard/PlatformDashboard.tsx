@@ -67,9 +67,9 @@ export const PlatformDashboard: React.FC<PlatformDashboardProps> = ({ onBackToHo
   const storeOrders = orders.filter(o => o.storeId === activeStore?.id);
 
   return (
-    <div className="min-h-screen bg-[#f4f0ed] text-[#1a1918] flex flex-col font-sans">
+    <div className="h-[100dvh] max-h-[100dvh] overflow-hidden bg-[#f4f0ed] text-[#1a1918] flex flex-col font-sans">
       {/* Top Application Bar */}
-      <header className="bg-[#1a1918] text-white px-4 py-3 border-b-4 border-[#1a1918] sticky top-0 z-40 flex items-center justify-between">
+      <header className="shrink-0 bg-[#1a1918] text-white px-4 py-3 border-b-4 border-[#1a1918] relative z-40 flex items-center justify-between">
         <div className="flex items-center gap-3">
           <button
             onClick={onBackToHome}
@@ -177,9 +177,9 @@ export const PlatformDashboard: React.FC<PlatformDashboardProps> = ({ onBackToHo
       </header>
 
       {/* Main Workspace Layout */}
-      <div className="flex-1 flex flex-col md:flex-row">
+      <div className="flex-1 min-h-0 flex flex-col md:flex-row overflow-y-auto md:overflow-hidden overscroll-contain [-webkit-overflow-scrolling:touch]">
         {/* Left Sidebar Navigation */}
-        <aside className="w-full md:w-64 bg-[#fdfaf6] border-r-3 border-b-3 md:border-b-0 border-[#1a1918] p-4 flex flex-col justify-between shrink-0">
+        <aside className="w-full md:w-64 bg-[#fdfaf6] border-r-3 border-b-3 md:border-b-0 border-[#1a1918] p-4 flex flex-col justify-between shrink-0 md:overflow-y-auto">
           <div className="space-y-6">
             {/* Active Store Widget */}
             <div className="bg-[#eedfc8] p-3 rounded-2xl border-2 border-[#1a1918] shadow-pop">
@@ -285,7 +285,7 @@ export const PlatformDashboard: React.FC<PlatformDashboardProps> = ({ onBackToHo
         </aside>
 
         {/* Center Content Canvas */}
-        <main className="flex-1 p-4 sm:p-6 lg:p-8 overflow-y-auto">
+        <main className="flex-1 min-h-0 min-w-0 p-4 sm:p-6 lg:p-8 md:overflow-y-auto overscroll-contain [-webkit-overflow-scrolling:touch]">
           {activeStore ? (
             <>
               {activeTab === 'dashboard' && (

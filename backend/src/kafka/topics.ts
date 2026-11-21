@@ -24,6 +24,10 @@ export const TOPICS = {
   ORDERS_PLACED: 'orders.placed',
   /** Emitted with new per-location stock after a change. Key: product id, so one product's updates stay ordered. */
   INVENTORY_UPDATED: 'inventory.updated',
+  /** Storefront (Razorpay) orders after payment verification. Key: Razorpay order id. */
+  STOREFRONT_ORDERS: 'retailsync-orders',
+  /** Storefront stock after a checkout or merchant edit. Key: `${storeId}/${productId}`. */
+  STOREFRONT_INVENTORY: 'retailsync-inventory',
 } as const;
 
 export type TopicName = (typeof TOPICS)[keyof typeof TOPICS];
@@ -48,6 +52,16 @@ export const TOPIC_SPECS: readonly TopicSpec[] = [
   },
   {
     topic: TOPICS.INVENTORY_UPDATED,
+    numPartitions: DEFAULT_PARTITIONS,
+    configEntries: { 'cleanup.policy': 'delete', 'retention.ms': String(SEVEN_DAYS_MS) },
+  },
+  {
+    topic: TOPICS.STOREFRONT_ORDERS,
+    numPartitions: DEFAULT_PARTITIONS,
+    configEntries: { 'cleanup.policy': 'delete', 'retention.ms': String(SEVEN_DAYS_MS) },
+  },
+  {
+    topic: TOPICS.STOREFRONT_INVENTORY,
     numPartitions: DEFAULT_PARTITIONS,
     configEntries: { 'cleanup.policy': 'delete', 'retention.ms': String(SEVEN_DAYS_MS) },
   },
