@@ -37,10 +37,10 @@ Only drill into specific files/directories after using graphify to identify the 
   - Non-owner users who attempt to enter the dashboard route encounter `<AccessDeniedModal />` which explains the single-tenant platform owner restriction.
   - The "👑 Dashboard" button in `<Header />` is displayed exclusively when `userEmail === 'kushalchalla981@gmail.com'`.
 
-### 2. Active Storefront & Dashboard (`new_frontend/`)
-- **Location**: `new_frontend/`
+### 2. Active Storefront & Dashboard (`frontend/`)
+- **Location**: `frontend/`
 - **Framework**: Vite + React 19 + TypeScript + Tailwind CSS
-- **Port**: 5174 for Vite dev server (`cd new_frontend && npm run dev`; Fastify backend on 3000, proxied via `/api`)
+- **Port**: 5174 for Vite dev server (`cd frontend && npm run dev`; Fastify backend on 3000, proxied via `/api`)
 - **Key Modules**:
   - `src/components/dashboard/PlatformDashboard.tsx`: Main administrative hub with multi-store switcher, owner badge, and tab routing.
   - `src/components/dashboard/DashboardOverview.tsx`: 4 KPI cards, live Aiven infrastructure telemetry, recent orders table.
@@ -55,11 +55,11 @@ Only drill into specific files/directories after using graphify to identify the 
 ### 3. Authentication: Clerk SDK Standard
 - Uses modern **`@clerk/react`** (v6 Core 3).
 - **CRITICAL**: Do **NOT** install or use the deprecated `@clerk/clerk-react` (v5 Core 2) SDK. New Clerk instances mandate ClerkJS v6 / Core 3, and older SDKs will trigger `Reference: 6SrWqrpP ("This app uses an outdated version of Clerk")`.
-- Configuration in `new_frontend/.env.local` (`VITE_CLERK_PUBLISHABLE_KEY`).
+- Configuration in `frontend/.env.local` (`VITE_CLERK_PUBLISHABLE_KEY`).
 - Components used: `<SignInButton mode="modal">`, `<SignUpButton mode="modal">`, `<UserButton />`.
 
 ### 4. Payment Processing: Razorpay
-- Integrated via `new_frontend/src/utils/razorpay.ts` and `src/components/CheckoutModal.tsx`.
+- Integrated via `frontend/src/utils/razorpay.ts` and `src/components/CheckoutModal.tsx`.
 - Backend creates orders and verifies signatures (`backend/src/routes/payments.ts`) using `RAZORPAY_KEY_ID` / `RAZORPAY_KEY_SECRET` from the backend env; the browser only receives the public key id. Test keys are preserved in `rzp-test-key.csv` (git-ignored).
 - Built-in simulation fallback guarantees unbroken UX during offline or unconfigured test periods.
 

@@ -1,15 +1,14 @@
 import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
 
-// Dev server on 5173; the Fastify backend owns 3000. /api is proxied so the
-// browser talks to one origin and no credentials ever reach the bundle.
 export default defineConfig({
   plugins: [react()],
   server: {
-    port: 5173,
+    port: 5174,
     host: true,
+    // Backend (Fastify) listens on 3000; same-origin /api in dev, like the Vercel rewrite in prod.
     proxy: {
       '/api': { target: process.env.API_PROXY_TARGET ?? 'http://localhost:3000', changeOrigin: true },
     },
-  },
+  }
 });

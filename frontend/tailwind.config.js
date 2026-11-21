@@ -1,36 +1,38 @@
 /** @type {import('tailwindcss').Config} */
-// Every name maps onto a Broadside token (src/tokens.css); no literal colour lives here.
 export default {
-  content: ['./index.html', './src/**/*.{ts,tsx}'],
+  content: [
+    "./index.html",
+    "./src/**/*.{js,ts,jsx,tsx}",
+  ],
   theme: {
     extend: {
       colors: {
-        paper: 'var(--color-paper)',
-        sheet: 'var(--color-paper-2)',
-        well: 'var(--color-paper-3)',
-        ink: 'var(--color-ink)',
-        'ink-2': 'var(--color-muted)',
-        rule: 'var(--color-rule)',
-        accent: 'var(--color-accent)',
-        band: 'var(--color-band)',
-        'band-ink': 'var(--color-band-ink)',
-        'band-muted': 'var(--color-band-muted)',
-        'band-rule': 'var(--color-band-rule)',
-        scrim: 'var(--color-scrim)',
-        /* One accent only: failures take vermilion, everything else prints in ink. */
-        fail: 'var(--color-accent)',
-        ok: 'var(--color-ink)',
-        wait: 'var(--color-ink-2)',
-        pg: 'var(--color-ink)',
-        kafka: 'var(--color-ink)',
-        os: 'var(--color-ink)',
+        cream: {
+          50: '#fcfaf8',
+          100: '#f5ebe0',
+          200: '#edd8c5',
+          300: '#e1c2a4',
+          900: '#252422',
+        },
+        brand: {
+          black: '#1a1918',
+          orange: '#ff5c35',
+          purple: '#7b4eff',
+          lime: '#a7f432',
+          pink: '#ff4382',
+          yellow: '#ffd600',
+          cyan: '#00e5ff',
+        }
       },
       fontFamily: {
-        sans: ['var(--font-body)'],
-        display: ['var(--font-display)'],
-        slab: ['var(--font-display-2)'],
+        display: ['Modak', 'Syne', 'system-ui', 'sans-serif'],
+        sans: ['Inter', 'system-ui', 'sans-serif'],
       },
+      boxShadow: {
+        'pop': '4px 4px 0px 0px rgba(26,25,24,1)',
+        'pop-lg': '8px 8px 0px 0px rgba(26,25,24,1)',
+      }
     },
   },
   plugins: [],
-};
+}

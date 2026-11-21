@@ -1,207 +1,90 @@
-/* Hallmark · shape: app screen · genre: editorial · theme: Broadside (deal 2/3, seed online-store-retail-chain-e917·e4c80d52·2026-11-13·r0) · redesign: full
- * nav: top bar, wordmark + store + race + cart · signature: the last-unit race set as a sale bill, one lot and five bidders on a millisecond rule · states: loading, empty, error, full · broadside: bill
- * axes: light/display-condensed/warm · posture: committed · contrast: pass · v2.0.0 */
-/* Hallmark · pre-emit critique: P3 H3 E3 S4 R3 V3 · weakest: H, the shop grid is still a grid of tags; set as a printed price list with hair rules so it reads as the bill's particulars */
-@import url("./tokens.css");
-@import url("./base.css");
-
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
-:root {
-  /* Ledger band: ink stock with buff type (Broadside's ink band). */
-  --color-band: var(--color-ink);
-  --color-band-ink: var(--color-paper);
-  --color-band-muted: oklch(78% 0.03 82);
-  --color-band-rule: oklch(36% 0.012 50);
-  --color-scrim: oklch(18% 0.01 50 / 0.55);
-  color-scheme: light;
+/* ---------- base (reference: body,html{background:#f4f0ed;…}) ---------- */
+html, body, #root {
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  overflow: hidden;
+  background: #f4f0ed;
+  color: #252422;
+  font-family: Inter, helvetica, arial, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  overscroll-behavior: none;
+  user-select: none;
+  -webkit-tap-highlight-color: transparent;
 }
+body { position: fixed; inset: 0; font-size: 16px; }
+.main, .app-wrapper, .page { position: relative; width: 100%; height: 100%; color: #252422; }
+.webgl { position: fixed; inset: 0; width: 100%; height: 100%; pointer-events: none; z-index: 0; }
 
-body {
-  font-family: var(--font-body);
+/* ---------- header ---------- */
+.app-header {
+  position: fixed; top: 20px; left: 10px; right: 10px; z-index: 100;
+  display: flex; justify-content: space-between; text-align: right;
+  color: #8c8080; font-size: 16px; letter-spacing: .2px; text-transform: uppercase;
+  opacity: 0; transform: translate3d(0, -5px, 0); transition: color .2s;
 }
+.app-header--in { opacity: 1; transform: none; transition: opacity .5s, transform .4s cubic-bezier(.215, .61, .355, 1); }
+@media (max-width: 1920px) { .app-header { font-size: 15px; } }
+@media (max-width: 1200px) { .app-header { font-size: 14px; } }
+@media (max-width: 700px)  { .app-header { font-size: 13px; } }
+.app-header a { position: relative; display: inline-block; margin: 0 10px; color: currentColor; font-weight: 500; text-decoration: none; transition: color .2s; }
+.app-header a:hover { color: #555; }
+.app-header a svg { position: absolute; bottom: -7px; left: -2px; width: 59px; }
+.app-header a svg path {
+  opacity: 0; stroke: currentColor; stroke-width: 5px; stroke-dasharray: 320; stroke-dashoffset: 475;
+  transition: opacity .3s, stroke-dashoffset .2s cubic-bezier(.55, .055, .675, .19);
+}
+.app-header a.router-link-active svg path { opacity: 1; stroke-dashoffset: 0; transition: opacity .3s, stroke-dashoffset .6s cubic-bezier(.175, .885, .32, 1.275); }
+@media (max-width: 1920px) { .app-header a svg { width: 56px; } }
+@media (max-width: 1200px) { .app-header a svg { width: 52px; } }
+@media (max-width: 700px)  { .app-header a svg { width: 49px; } }
 
-h1,
-.display {
-  font-family: var(--font-display);
-  font-weight: 400;
-  text-transform: uppercase;
-  line-height: 1;
-  letter-spacing: var(--tracking-display);
-  max-width: none;
-}
-/* Fitted lines never wrap, so they may set solid. */
-.display,
-.fit {
-  white-space: nowrap;
-  line-height: 0.88;
-}
-h2,
-h3,
-.wordmark {
-  font-family: var(--font-display-2);
-  font-weight: 400;
-  text-transform: uppercase;
-  line-height: 1;
-  letter-spacing: 0;
-}
-.fit {
-  display: block;
-}
+/* ---------- preloader ---------- */
+.preloader { position: fixed; inset: 0; z-index: 10; display: flex; align-items: center; justify-content: center; pointer-events: none; cursor: wait; }
+.preloader__svg { position: absolute; left: 50%; top: 50%; transform: translate3d(-50%, -50%, 0); transform-origin: center; stroke: #e6e0db; }
+.preloader__svg-progress { stroke: #ffcc8e; }
+.preloader__svg-progress path { stroke-dasharray: 400; stroke-dashoffset: 400; }
 
-/* Figures: the narrow face in tabular numerals (Broadside keeps three faces). */
-.figures {
-  font-family: var(--font-body);
-  font-variant-numeric: tabular-nums;
-}
+/* ---------- transition blocks ---------- */
+.transition-blocks { pointer-events: none; z-index: 60; }
+.transition-blocks, .transition-blocks__el { position: fixed; inset: 0; width: 100%; height: 100%; }
+.transition-blocks__el { background: #ffdeb4; transform: scaleY(0); transform-origin: bottom; }
 
-.rule-bar {
-  border-top: var(--rule-bar) solid var(--color-ink);
-}
-.rule-hair {
-  border-top: var(--rule-hair) solid var(--color-rule);
-}
-.on-band .rule-hair {
-  border-top-color: var(--color-band-rule);
-}
-.frame {
-  border: var(--rule-frame) solid var(--color-ink);
-  box-shadow:
-    inset 0 0 0 3px var(--color-paper),
-    inset 0 0 0 4px var(--color-ink);
-}
+/* ---------- home ---------- */
+.home { display: flex; flex-direction: column; align-items: center; justify-content: center; overflow: hidden; }
+.home__links { position: fixed; left: 20px; bottom: 20px; font-size: .01px; line-height: 1.5; }
+.home__links a { color: #000; opacity: 0; text-decoration: none; }
 
-/* Controls: the ink block and the framed block, eight states. */
-.btn {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: var(--space-xs);
-  min-height: 44px;
-  padding: 0 var(--space-md);
-  border: 3px solid var(--color-ink);
-  background: var(--color-ink);
-  color: var(--color-paper);
-  font: 600 var(--text-sm) / 1 var(--font-body);
-  text-transform: uppercase;
-  cursor: pointer;
-  transition:
-    background-color var(--dur-micro) var(--ease-out),
-    color var(--dur-micro) var(--ease-out);
+/* ---------- work names ---------- */
+.work-names {
+  position: fixed; bottom: calc(9% - 20px); padding: 20px; z-index: 5;
+  display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center;
+  color: #8c8080; cursor: pointer; opacity: 0; visibility: hidden;
 }
-.btn:hover {
-  background: var(--color-ink-2);
-  border-color: var(--color-ink-2);
-}
-.btn:active {
-  background: var(--color-accent);
-  border-color: var(--color-accent);
-}
-.btn--frame {
-  background: transparent;
-  color: var(--color-ink);
-  box-shadow:
-    inset 0 0 0 3px var(--color-paper),
-    inset 0 0 0 4px var(--color-ink);
-}
-.btn--frame:hover {
-  background: var(--color-paper-2);
-  border-color: var(--color-ink);
-}
-.btn--frame:active {
-  background: var(--color-paper-3);
-  border-color: var(--color-ink);
-}
-.btn:disabled,
-.btn[aria-disabled='true'] {
-  cursor: not-allowed;
-  background: transparent;
-  color: var(--color-muted);
-  border-color: var(--color-rule);
-  box-shadow: none;
-}
-.btn[aria-busy='true'] {
-  cursor: progress;
-}
+@media (max-width: 1200px) { .work-names { bottom: calc(9% - 40px); } }
+@media (max-width: 700px)  { .work-names { bottom: 6%; } }
+.work-names__bar { position: absolute; top: 48px; left: 10px; width: calc(100% - 20px); height: 1px; opacity: 0; transform: scaleX(0); transform-origin: center; }
+.work-names__bar svg { position: absolute; left: 50%; top: 50%; width: 60%; height: 5px; opacity: .9; transform: translate3d(-50%, -50%, 0); }
+.work-names__bar svg path { stroke: #8c8080; stroke-dasharray: 300; stroke-dashoffset: 600; animation: loopThunder 1.5s cubic-bezier(.455, .03, .515, .955) infinite; }
+@media (max-width: 1200px) { .work-names__bar { top: 45px; } }
+@media (max-width: 700px)  { .work-names__bar { top: 42px; } }
+.work-names__title { position: relative; font-size: 21px; font-weight: 700; letter-spacing: -.6px; text-transform: lowercase; white-space: nowrap; }
+@media (max-width: 1200px) { .work-names__title { font-size: 19px; letter-spacing: -.5px; } }
+@media (max-width: 700px)  { .work-names__title { font-size: 18px; letter-spacing: -.3px; } }
+.work-names__title-2 { position: absolute; top: 20px; left: 20px; right: 20px; opacity: .4; z-index: -1; }
+.work-names__type { margin: 10px 0 0; font-size: 14px; opacity: .5; }
+@media (max-width: 1200px) { .work-names__type { font-size: 13px; } }
+@media (max-width: 700px)  { .work-names__type { font-size: 12px; } }
 
-.field {
-  min-height: 44px;
-  border: 1px solid var(--color-ink);
-  background: var(--color-paper);
-  color: var(--color-ink);
-  padding: 0 var(--space-sm);
-  border-radius: 0;
-}
-.field:hover {
-  background: var(--color-paper-2);
-}
-.field:disabled {
-  color: var(--color-muted);
-  border-color: var(--color-rule);
-}
-.field[aria-invalid='true'] {
-  border-color: var(--color-accent);
-}
+@keyframes loopThunder { 0% { stroke-dashoffset: 600; } to { stroke-dashoffset: 0; } }
 
-/* The stamp: a plain verdict in the narrow face, framed; no tracking, no tilt. */
-.verdict {
-  display: inline-block;
-  padding: var(--space-3xs) var(--space-xs);
-  border: 1px solid currentColor;
-  font: 600 var(--text-xs) / 1.3 var(--font-body);
-  white-space: nowrap;
-}
-
-.on-band :focus-visible {
-  outline-color: var(--color-band-ink);
-}
-
-/* One live cue, kept for a buyer blocked on a row lock. */
-@keyframes lock-contention {
-  0%,
-  100% {
-    opacity: 1;
-  }
-  50% {
-    opacity: 0.45;
-  }
-}
-.lock-pulse {
-  animation: lock-contention 0.9s ease-in-out infinite;
-}
-
-/* A ledger line prints: it drops into place from under the line above. */
-@keyframes line-in {
-  from {
-    opacity: 0;
-    transform: translateY(-8px);
-  }
-}
-.line-in {
-  animation: line-in var(--dur-short) var(--ease-out);
-}
-/* A stock figure rolls when PostgreSQL reports a new count. */
-@keyframes tick-in {
-  from {
-    opacity: 0;
-    transform: translateY(70%);
-  }
-}
-.tick-in {
-  animation: tick-in var(--dur-short) var(--ease-out);
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .line-in,
-  .tick-in {
-    animation: none;
-  }
-  .lock-pulse {
-    animation: none;
-  }
-  .btn {
-    transition: none;
-  }
-}
+/* ---------- modals (kept from the original project) ---------- */
+@keyframes fadeIn { from { opacity: 0; transform: scale(.96); } to { opacity: 1; transform: scale(1); } }
+.animate-fadeIn { animation: fadeIn .25s cubic-bezier(.16, 1, .3, 1) forwards; }
+::-webkit-scrollbar { width: 4px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: #8c8080; border-radius: 9999px; }
