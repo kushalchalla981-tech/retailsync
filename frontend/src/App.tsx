@@ -93,10 +93,9 @@ export const App: React.FC = () => {
     return () => window.removeEventListener('keydown', onKey);
   }, []);
 
-  /** Owner -> dashboard, creator -> store creator, shopper -> profile, signed out -> sign in. */
+  /** Owner -> platform dashboard, creator -> store dashboard, visitor -> profile, signed out -> sign in. */
   const openProfile = useCallback(() => {
-    if (role === 'owner') setDashboardOpen(true);
-    else if (role === 'creator') setCreatorOpen(true);
+    if (role === 'owner' || role === 'creator') setDashboardOpen(true);
     else if (role === 'visitor') setProfileOpen(true);
     else clerk.openSignIn();
   }, [role, clerk]);
@@ -181,7 +180,7 @@ export const App: React.FC = () => {
             setActiveIndex(nextIdx);
             scene.current?.goTo(nextIdx);
           }}
-          onCreateStore={openProfile}
+          onCreateStore={() => setCreatorOpen(true)}
         />
       )}
 
@@ -194,10 +193,28 @@ export const App: React.FC = () => {
       />
       <AboutModal isOpen={aboutOpen} onClose={() => toggleAbout(false)} />
       <UniversalSearchModal isOpen={searchOpen} onClose={() => setSearchOpen(false)} />
-      <ProfileModal isOpen={profileOpen} onClose={() => setProfileOpen(false)} onExplore={() => { if (selected) close(); }} />
-      {role === 'creator' && (
-        <CreateStoreModal isOpen={creatorOpen} onClose={() => setCreatorOpen(false)} onStoreCreated={() => setCreatorOpen(false)} />
-      )}
+      <ProfileModal
+        isOpen={profileOpen}
+        onClose={() => setProfileOpen(false)}
+        onExplore={() => { if (selected) close(); }}
+        onCreateStore={() => {
+          setProfileOpen(false);
+          setCreatorOpen(true);
+        }}
+        onOpenDashboard={() => {
+          setProfileOpen(false);
+          setDashboardOpen(true);
+        }}
+      />
+      <CreateStoreModal
+        isOpen={creatorOpen}
+        onClose={() => setCreatorOpen(false)}
+        onStoreCreated={() => {
+          setCreatorOpen(false);
+          setStores([...storeManager.getStores()]);
+          setDashboardOpen(true);
+        }}
+      />
       <CartDrawer />
     </main>
   );

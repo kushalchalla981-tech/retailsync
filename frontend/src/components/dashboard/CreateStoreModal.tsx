@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { useUser } from '@clerk/react';
 import { X, ArrowRight, ArrowLeft, Sparkles, CheckCircle2 } from 'lucide-react';
 import { ExtendedStore, storeManager } from '../../data/storeManager';
 import { ThunderLine } from '../ThunderLine';
@@ -28,6 +29,9 @@ const THEMES = [
 ];
 
 export const CreateStoreModal: React.FC<CreateStoreModalProps> = ({ isOpen, onClose, onStoreCreated }) => {
+  const { user } = useUser();
+  const userEmail = user?.primaryEmailAddress?.emailAddress?.toLowerCase() || '';
+  const userName = user?.fullName || userEmail.split('@')[0] || 'Merchant';
   const [step, setStep] = useState(1);
 
   // Step 1: Store Information
@@ -66,6 +70,8 @@ export const CreateStoreModal: React.FC<CreateStoreModalProps> = ({ isOpen, onCl
     const newStore = storeManager.createStore({
       name: name || 'New Store',
       category,
+      ownerEmail: userEmail || 'merchant@retailsync.app',
+      ownerName: userName,
       tagline: description.slice(0, 50) || `Curated ${category} store`,
       description: description || `Welcome to ${name}, proudly powered by RetailSync.`,
       highlights: [

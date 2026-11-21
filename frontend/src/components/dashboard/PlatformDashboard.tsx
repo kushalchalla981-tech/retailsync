@@ -18,7 +18,7 @@ import { OrdersManagement } from './OrdersManagement';
 import { CustomizeStore } from './CustomizeStore';
 import { AIAssistant } from './AIAssistant';
 import { CreateStoreModal } from './CreateStoreModal';
-import { AccessDeniedModal } from './AccessDeniedModal';
+import { ThunderLine } from '../ThunderLine';
 import { OWNER_EMAIL } from '../../utils/roles';
 
 interface PlatformDashboardProps {
@@ -29,9 +29,14 @@ type TabType = 'dashboard' | 'products' | 'orders' | 'customize' | 'assistant';
 
 export const PlatformDashboard: React.FC<PlatformDashboardProps> = ({ onBackToHome }) => {
   const { user } = useUser();
-  const [stores, setStores] = useState<ExtendedStore[]>(storeManager.getStores());
+  const userEmail = user?.primaryEmailAddress?.emailAddress?.toLowerCase() || '';
+  const isPlatformOwner = userEmail === OWNER_EMAIL;
+
+  const [stores, setStores] = useState<ExtendedStore[]>(() =>
+    storeManager.getStoresForUser(userEmail, isPlatformOwner)
+  );
   const [orders, setOrders] = useState<StoreOrder[]>(storeManager.getOrders());
-  const [activeStoreId, setActiveStoreId] = useState<string>(stores[0]?.id || 'store-1');
+  const [activeStoreId, setActiveStoreId] = useState<string>(stores[0]?.id || '');
   const [activeTab, setActiveTab] = useState<TabType>('dashboard');
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [isStoreDropdownOpen, setIsStoreDropdownOpen] = useState(false);
@@ -39,7 +44,7 @@ export const PlatformDashboard: React.FC<PlatformDashboardProps> = ({ onBackToHo
   // Subscribe to changes in storeManager
   useEffect(() => {
     const unsubscribe = storeManager.subscribe(() => {
-      const updatedStores = storeManager.getStores();
+      const updatedStores = storeManager.getStoresForUser(userEmail, isPlatformOwner);
       setStores([...updatedStores]);
       setOrders([...storeManager.getOrders()]);
       if (!updatedStores.find(s => s.id === activeStoreId) && updatedStores.length > 0) {
@@ -47,11 +52,14 @@ export const PlatformDashboard: React.FC<PlatformDashboardProps> = ({ onBackToHo
       }
     });
     return unsubscribe;
-  }, [activeStoreId]);
+  }, [activeStoreId, userEmail, isPlatformOwner]);
 
-  // Authorization Check: only the platform owner (OWNER_EMAIL) manages stores.
-  const userEmail = user?.primaryEmailAddress?.emailAddress?.toLowerCase() || '';
-  const isPlatformOwner = userEmail === OWNER_EMAIL;
+  // Ensure activeStoreId is set if empty and stores exist
+  useEffect(() => {
+    if (!activeStoreId && stores.length > 0) {
+      setActiveStoreId(stores[0].id);
+    }
+  }, [stores, activeStoreId]);
 
   const activeStore = stores.find(s => s.id === activeStoreId) || stores[0];
 
@@ -79,7 +87,7 @@ export const PlatformDashboard: React.FC<PlatformDashboardProps> = ({ onBackToHo
               RetailSync
             </span>
             <span className="bg-[#a7f432] text-[#1a1918] font-mono text-[10px] font-black px-2 py-0.5 rounded-full uppercase">
-              Dashboard
+              {isPlatformOwner ? 'Platform Hub' : 'Merchant Hub'}
             </span>
           </div>
         </div>
@@ -91,34 +99,46 @@ export const PlatformDashboard: React.FC<PlatformDashboardProps> = ({ onBackToHo
             className="flex items-center gap-2 bg-[#fdfaf6] text-[#1a1918] px-3.5 py-1.5 rounded-xl border-2 border-[#1a1918] shadow-pop font-mono text-xs font-black uppercase hover:bg-[#eedfc8] transition-all"
           >
             <span className="text-base">{activeStore?.symbol || '🛍️'}</span>
-            <span className="truncate max-w-[120px] sm:max-w-[180px]">{activeStore?.name || 'Select Store'}</span>
+            <span className="truncate max-w-[120px] sm:max-w-[180px]">{activeStore?.name || (isPlatformOwner ? 'Select Store' : 'No Stores Yet')}</span>
             <ChevronDown className="w-3.5 h-3.5 opacity-60" />
           </button>
 
           {isStoreDropdownOpen && (
-            <div className="absolute top-full mt-2 left-1/2 -translate-x-1/2 w-64 bg-[#fdfaf6] border-3 border-[#1a1918] rounded-2xl shadow-pop-lg z-50 overflow-hidden font-mono text-xs">
-              <div className="p-2 border-b border-[#1a1918]/15 bg-[#eedfc8] font-bold text-[11px] text-[#786f66] uppercase">
-                Platform Stores ({stores.length})
+            <div className="absolute top-full mt-2 left-1/2 -translate-x-1/2 w-72 bg-[#fdfaf6] border-3 border-[#1a1918] rounded-2xl shadow-pop-lg z-50 overflow-hidden font-mono text-xs">
+              <div className="p-2 border-b border-[#1a1918]/15 bg-[#eedfc8] font-bold text-[11px] text-[#786f66] uppercase flex items-center justify-between">
+                <span>{isPlatformOwner ? `All Platform Stores (${stores.length})` : `My Stores (${stores.length})`}</span>
+                {isPlatformOwner && <span className="text-[9px] text-[#ff5c35] font-black bg-[#ff5c35]/15 px-1.5 py-0.5 rounded">OWNER</span>}
               </div>
               <div className="max-h-60 overflow-y-auto divide-y divide-[#1a1918]/10">
-                {stores.map((s) => (
-                  <button
-                    key={s.id}
-                    onClick={() => {
-                      setActiveStoreId(s.id);
-                      setIsStoreDropdownOpen(false);
-                    }}
-                    className={`w-full p-2.5 flex items-center justify-between text-left hover:bg-[#f5ede4] transition-colors ${
-                      activeStoreId === s.id ? 'bg-[#ff5c35]/10 font-black text-[#ff5c35]' : 'text-[#1a1918]'
-                    }`}
-                  >
-                    <div className="flex items-center gap-2 truncate">
-                      <span>{s.symbol}</span>
-                      <span className="truncate">{s.name}</span>
-                    </div>
-                    <span className="text-[10px] text-[#786f66] uppercase">{s.category}</span>
-                  </button>
-                ))}
+                {stores.length === 0 ? (
+                  <div className="p-4 text-center text-[#786f66]">No stores created yet</div>
+                ) : (
+                  stores.map((s) => (
+                    <button
+                      key={s.id}
+                      onClick={() => {
+                        setActiveStoreId(s.id);
+                        setIsStoreDropdownOpen(false);
+                      }}
+                      className={`w-full p-2.5 flex items-center justify-between text-left hover:bg-[#f5ede4] transition-colors ${
+                        activeStoreId === s.id ? 'bg-[#ff5c35]/10 font-black text-[#ff5c35]' : 'text-[#1a1918]'
+                      }`}
+                    >
+                      <div className="flex items-center gap-2 truncate">
+                        <span>{s.symbol}</span>
+                        <div className="truncate">
+                          <p className="truncate leading-tight">{s.name}</p>
+                          {isPlatformOwner && s.ownerEmail && (
+                            <p className="text-[9px] text-[#ff5c35] font-normal truncate">
+                              by {s.ownerName || s.ownerEmail}
+                            </p>
+                          )}
+                        </div>
+                      </div>
+                      <span className="text-[10px] text-[#786f66] uppercase shrink-0 ml-1.5">{s.category}</span>
+                    </button>
+                  ))
+                )}
               </div>
               <div className="p-2 border-t-2 border-[#1a1918] bg-[#f4f0ed]">
                 <button
@@ -144,8 +164,9 @@ export const PlatformDashboard: React.FC<PlatformDashboardProps> = ({ onBackToHo
               <span className="hidden md:inline">Platform Owner</span>
             </div>
           ) : (
-            <div className="flex items-center gap-1 bg-[#ffd600] text-[#1a1918] px-2.5 py-1 rounded-full border border-[#1a1918] font-mono text-xs font-bold">
-              <span>Visitor</span>
+            <div className="flex items-center gap-1 bg-[#ffd600] text-[#1a1918] px-2.5 py-1 rounded-full border border-[#1a1918] font-mono text-xs font-bold shadow-pop">
+              <span className="hidden md:inline">🏪</span>
+              <span>Merchant</span>
             </div>
           )}
           <UserButton />
@@ -262,7 +283,7 @@ export const PlatformDashboard: React.FC<PlatformDashboardProps> = ({ onBackToHo
 
         {/* Center Content Canvas */}
         <main className="flex-1 p-4 sm:p-6 lg:p-8 overflow-y-auto">
-          {activeStore && (
+          {activeStore ? (
             <>
               {activeTab === 'dashboard' && (
                 <DashboardOverview
@@ -284,7 +305,7 @@ export const PlatformDashboard: React.FC<PlatformDashboardProps> = ({ onBackToHo
               {activeTab === 'customize' && (
                 <CustomizeStore
                   store={activeStore}
-                  onStoreUpdated={() => setStores([...storeManager.getStores()])}
+                  onStoreUpdated={() => setStores([...storeManager.getStoresForUser(userEmail, isPlatformOwner)])}
                 />
               )}
 
@@ -292,6 +313,26 @@ export const PlatformDashboard: React.FC<PlatformDashboardProps> = ({ onBackToHo
                 <AIAssistant store={activeStore} allStores={stores} />
               )}
             </>
+          ) : (
+            <div className="max-w-xl mx-auto my-12 bg-white border-4 border-[#1a1918] rounded-3xl p-8 shadow-pop-lg text-center space-y-5 animate-fadeIn">
+              <div className="w-16 h-16 bg-[#ff5c35]/15 border-2 border-[#1a1918] rounded-2xl flex items-center justify-center mx-auto text-3xl shadow-pop">
+                🏪
+              </div>
+              <div>
+                <h2 className="font-black text-2xl uppercase tracking-tight text-[#1a1918]">Welcome to Merchant Studio</h2>
+                <ThunderLine color="#ff5c35" className="w-32 h-2.5 mx-auto mt-2" />
+              </div>
+              <p className="text-sm text-[#5a534d] leading-relaxed">
+                You haven't launched a store yet. Launch your storefront in under 2 minutes to begin managing products, tracking live orders, and customizing your brand.
+              </p>
+              <button
+                onClick={() => setIsCreateModalOpen(true)}
+                className="inline-flex items-center gap-2 bg-[#ff5c35] text-white px-6 py-3 rounded-xl font-mono text-xs uppercase tracking-wider font-black border-2 border-[#1a1918] shadow-pop hover:bg-[#1a1918] transition-all cursor-pointer"
+              >
+                <PlusCircle className="w-4 h-4" />
+                <span>Launch Your First Store</span>
+              </button>
+            </div>
           )}
         </main>
       </div>
@@ -301,19 +342,10 @@ export const PlatformDashboard: React.FC<PlatformDashboardProps> = ({ onBackToHo
         isOpen={isCreateModalOpen}
         onClose={() => setIsCreateModalOpen(false)}
         onStoreCreated={(newStore) => {
-          setStores([...storeManager.getStores()]);
+          setStores([...storeManager.getStoresForUser(userEmail, isPlatformOwner)]);
           setActiveStoreId(newStore.id);
         }}
       />
-
-      {/* Non-owner guard modal */}
-      {!isPlatformOwner && (
-        <AccessDeniedModal
-          isOpen={true}
-          onClose={onBackToHome}
-          currentUserEmail={userEmail}
-        />
-      )}
     </div>
   );
 };

@@ -33,3 +33,4 @@ Thumbs.db
 certs
 graphify-out/
 render.env
+*.pdf

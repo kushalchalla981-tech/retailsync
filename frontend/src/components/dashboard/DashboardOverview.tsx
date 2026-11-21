@@ -25,6 +25,25 @@ export const DashboardOverview: React.FC<DashboardOverviewProps> = ({
 
   return (
     <div className="space-y-6 animate-fadeIn">
+      {/* Creator Info Pill for Stores */}
+      {store.ownerEmail && (
+        <div className="bg-[#eedfc8] border-2 border-[#1a1918] rounded-2xl px-4 py-2.5 flex items-center justify-between text-xs font-mono shadow-sm">
+          <div className="flex items-center gap-2">
+            <span className="bg-[#1a1918] text-[#a7f432] px-2 py-0.5 rounded-full text-[10px] font-black uppercase">
+              Creator Store
+            </span>
+            <span className="font-bold text-[#1a1918]">Created by:</span>
+            <span className="text-[#ff5c35] font-black">{store.ownerName || 'Merchant'}</span>
+            <span className="text-[#786f66]">({store.ownerEmail})</span>
+          </div>
+          {store.createdDate && (
+            <span className="text-[#786f66] hidden sm:inline">
+              Launched {new Date(store.createdDate).toLocaleDateString()}
+            </span>
+          )}
+        </div>
+      )}
+
       {/* 4 Stat Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         {/* Total Revenue */}

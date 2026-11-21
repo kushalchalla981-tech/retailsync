@@ -28,6 +28,9 @@ export interface StoreOrder {
 }
 
 export interface ExtendedStore extends DemoStore {
+  ownerEmail?: string;
+  ownerName?: string;
+  createdDate?: string;
   businessType?: string;
   themeName?: 'Aurora' | 'Sunset' | 'Forest' | 'Midnight' | 'Obsidian';
   announcement?: string;
@@ -242,6 +245,7 @@ class StoreManager {
     const newStore: ExtendedStore = {
       ...storeData,
       id,
+      createdDate: storeData.createdDate || new Date().toISOString(),
       products: toProducts(storeData.catalog),
       avatarTheme: {
         primaryColor: storeData.primaryColor,
@@ -254,6 +258,19 @@ class StoreManager {
     this.stores.unshift(newStore);
     this.save();
     return newStore;
+  }
+
+  getStoresForUser(userEmail: string, isPlatformOwner: boolean): ExtendedStore[] {
+    if (isPlatformOwner) return this.getStores();
+    const normalized = userEmail.trim().toLowerCase();
+    if (!normalized) return [];
+    return this.getStores().filter(s => s.ownerEmail?.trim().toLowerCase() === normalized);
+  }
+
+  userOwnsStores(userEmail: string): boolean {
+    const normalized = userEmail.trim().toLowerCase();
+    if (!normalized) return false;
+    return this.getStores().some(s => s.ownerEmail?.trim().toLowerCase() === normalized);
   }
 
   deleteStore(id: string) {

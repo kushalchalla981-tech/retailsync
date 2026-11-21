@@ -35,21 +35,21 @@ Refer to `V1_01_PLAN.md` for full implementation details:
 4. **Full-Page Storefront**: Expand `StoreDetailModal` to full-page, place "[WHAT MAKES US DIFFERENT]" directly below the store name, expand catalog (6-8 items per store) with real product images and quantity steppers (resolving Image 1 redesign).
 5. **Global Cart System**: Slide-over cart drawer with persistent items, quantity modifiers, currency-aware totals, and direct Razorpay checkout.
 6. **Profile Click Routing & RBAC**:
-   - **Platform Owner (`kushalchalla981@gmail.com`)**: Accesses full administrative **Platform Dashboard**.
-   - **Shop Creator (non-owner merchant)**: Accesses Store Creator wizard to create/manage storefronts.
-   - **Visitor**: View profile, order history, active currency, or sign up as a creator.
+   - **Platform Owner (`kushalchalla981@gmail.com`)**: Full administrative **Platform Dashboard** with visibility over ALL stores (flagship + merchant-built stores with creator metadata), platform GMV, and Aiven telemetry.
+   - **Shop Creator (non-owner merchant)**: Direct store builder (no approval gates). Accesses their scoped **Merchant Dashboard** to manage products, inventory, orders, themes, and AI assistant for their created stores.
+   - **Visitor**: View profile, order history, active currency, or immediately launch a store.
 7. **Repository Transparency**: Official GitHub link (`https://github.com/kushalchalla981-tech/retailsync.git`) displayed in the About modal.
 
 ---
 
 ## Platform Architecture & Role Separation
 
-### 1. Platform Owner Enforcement
+### 1. Platform Owner & Merchant Roles
 - **Platform Owner Identity**: Exclusively fixed to **`kushalchalla981@gmail.com`**.
 - **Access Rule**:
-  - Only the Platform Owner can manage platform-wide stores, alter all catalogs, adjust inventories, customize themes, or delete stores.
-  - Non-owner users who attempt to enter owner routes are cleanly routed to creator/visitor views or `<AccessDeniedModal />`.
-  - The "👑 Dashboard" button in `<Header />` is displayed when `userEmail === 'kushalchalla981@gmail.com'`, or via profile click.
+  - The Platform Owner has global super-admin oversight: manages platform-wide stores, sees every store created by any merchant with creator email and launch timestamp, alters all catalogs, adjusts inventories, and inspects Aiven infrastructure.
+  - Merchants/Creators can immediately create and launch storefronts. Their dashboard is strictly scoped to the store(s) they created (`ownerEmail === userEmail`), allowing full catalog, order, theme, and AI management without seeing other merchants' data.
+  - The header dynamically reflects role: "👑 Platform Dashboard" for the owner, "🏪 My Store" for creators, and "Create Store" in bottom HUD and profile.
 
 ### 2. Active Storefront & Dashboard (`frontend/`)
 - **Location**: `frontend/`
