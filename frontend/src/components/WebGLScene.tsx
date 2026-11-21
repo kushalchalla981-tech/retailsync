@@ -23,6 +23,8 @@ interface WebGLSceneProps {
   onHideName: () => void;
   onNameHover: (hovered: boolean) => void;
   onSelect: (index: number) => void;
+  /** Called instead of rendering when the browser cannot create a WebGL context. */
+  onUnsupported: () => void;
   apiRef: React.MutableRefObject<SceneApi | null>;
   stores?: ExtendedStore[];
 }
@@ -34,12 +36,13 @@ export const WebGLScene: React.FC<WebGLSceneProps> = ({
   onHideName,
   onNameHover,
   onSelect,
+  onUnsupported,
   apiRef,
   stores,
 }) => {
   const containerRef = useRef<HTMLDivElement>(null);
-  const cb = useRef({ onProgress, onShowName, onHideName, onNameHover, onSelect });
-  cb.current = { onProgress, onShowName, onHideName, onNameHover, onSelect };
+  const cb = useRef({ onProgress, onShowName, onHideName, onNameHover, onSelect, onUnsupported });
+  cb.current = { onProgress, onShowName, onHideName, onNameHover, onSelect, onUnsupported };
   const startRef = useRef<(() => void) | null>(null);
 
   const members: TeamMember[] = stores && stores.length > 0 ? stores.map(storeToTeamMember) : TEAM_MEMBERS;
@@ -47,7 +50,14 @@ export const WebGLScene: React.FC<WebGLSceneProps> = ({
 
   useEffect(() => {
     const container = containerRef.current!;
-    const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: false });
+    let renderer: THREE.WebGLRenderer;
+    try {
+      renderer = new THREE.WebGLRenderer({ antialias: true, alpha: false });
+    } catch {
+      // GPU disabled or blocklisted (e.g. Chrome with graphics acceleration off): let the app show its 2D fallback.
+      cb.current.onUnsupported();
+      return;
+    }
     renderer.outputColorSpace = THREE.LinearSRGBColorSpace;
     renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
     renderer.setClearColor(new THREE.Color(244 / 255, 240 / 255, 237 / 255), 1);

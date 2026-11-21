@@ -9,6 +9,7 @@ import { TransitionBlocks, TransitionApi } from './components/TransitionBlocks';
 import { StoreDetailModal } from './components/StoreDetailModal';
 import { AboutModal } from './components/AboutModal';
 import { BottomHUD } from './components/BottomHUD';
+import { StoreGrid } from './components/StoreGrid';
 import { PlatformDashboard } from './components/dashboard/PlatformDashboard';
 import { sound } from './utils/sound';
 import { useClerk } from '@clerk/react';
@@ -29,6 +30,7 @@ export const App: React.FC = () => {
   const [activeIndex, setActiveIndex] = useState(0);
   const [isMuted, setIsMuted] = useState(sound.getMuted());
   const [searchOpen, setSearchOpen] = useState(false);
+  const [webglOk, setWebglOk] = useState(true);
   const [profileOpen, setProfileOpen] = useState(false);
   const [creatorOpen, setCreatorOpen] = useState(false);
   const { role } = useRole();
@@ -132,7 +134,7 @@ export const App: React.FC = () => {
       />
       <div className="app-wrapper">
         {!ready && <Preloader progress={progress} onDone={() => setReady(true)} />}
-        {fontsReady && (
+        {fontsReady && webglOk && (
           <WebGLScene
             ready={ready}
             apiRef={scene}
@@ -145,8 +147,10 @@ export const App: React.FC = () => {
             onHideName={() => names.current?.hide()}
             onNameHover={(h) => (h ? names.current?.enter() : names.current?.leave())}
             onSelect={open}
+            onUnsupported={() => { setWebglOk(false); setProgress(1); }}
           />
         )}
+        {!webglOk && ready && !selected && <StoreGrid stores={stores} onOpen={open} />}
         <div className="page page--home home">
           {/* screen-reader / keyboard links */}
           <div className="home__links">
@@ -161,7 +165,7 @@ export const App: React.FC = () => {
         <TransitionBlocks ref={transition} />
       </div>
 
-      {ready && !selected && !aboutOpen && !searchOpen && (
+      {ready && webglOk && !selected && !aboutOpen && !searchOpen && (
         <BottomHUD
           member={activeStore}
           activeIndex={activeIndex}
