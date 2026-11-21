@@ -62,6 +62,33 @@ export const PlatformDashboard: React.FC<PlatformDashboardProps> = ({ onBackToHo
     }
   }, [stores, activeStoreId]);
 
+  // Handle ESC key globally inside the dashboard:
+  // 1. Close store dropdown if open
+  // 2. Close Create Store wizard if open
+  // 3. If an input/textarea is focused, blur it
+  // 4. Otherwise, exit the dashboard back to the 3D showcase
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key !== 'Escape') return;
+      if (isStoreDropdownOpen) {
+        setIsStoreDropdownOpen(false);
+        return;
+      }
+      if (isCreateModalOpen) {
+        setIsCreateModalOpen(false);
+        return;
+      }
+      const activeEl = document.activeElement;
+      if (activeEl instanceof HTMLElement && /^(INPUT|TEXTAREA|SELECT)$/.test(activeEl.tagName)) {
+        activeEl.blur();
+        return;
+      }
+      onBackToHome();
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [isStoreDropdownOpen, isCreateModalOpen, onBackToHome]);
+
   const activeStore = stores.find(s => s.id === activeStoreId) || stores[0];
   // Every view is about the selected store: a merchant never sees other stores' orders or revenue.
   const storeOrders = orders.filter(o => o.storeId === activeStore?.id);

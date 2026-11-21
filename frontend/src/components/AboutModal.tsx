@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { X, Store, Database, Zap, Search, ShieldCheck, GitBranch, ExternalLink } from 'lucide-react';
 import { ServiceLedgerModal } from './ServiceLedgerModal';
 import type { Service } from '../utils/telemetry';
@@ -21,6 +21,19 @@ const CARDS: { id: Service; name: string; icon: React.ReactNode; glow: string; t
 
 export const AboutModal: React.FC<AboutModalProps> = ({ isOpen, onClose }) => {
   const [ledger, setLedger] = useState<Service | null>(null);
+
+  useEffect(() => {
+    if (!isOpen || ledger !== null) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        sound.playWhoosh(0.8);
+        onClose();
+      }
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [isOpen, ledger, onClose]);
+
   if (!isOpen) return null;
 
   return (

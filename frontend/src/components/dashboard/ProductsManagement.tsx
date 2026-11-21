@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { PlusCircle, Search, Trash2, Edit2, Package, Check, X, AlertTriangle } from 'lucide-react';
 import { ExtendedStore, storeManager, STOCK_BASELINE, STOCK_TOPLINE } from '../../data/storeManager';
 import { ThunderLine } from '../ThunderLine';
@@ -23,6 +23,19 @@ export const ProductsManagement: React.FC<ProductsManagementProps> = ({ store })
   const [newProdSku, setNewProdSku] = useState(`RS-${store.category.slice(0, 3).toUpperCase()}-${Math.floor(Math.random() * 900 + 100)}`);
 
   const categories = ['All', ...Array.from(new Set(store.catalog.map(p => p.category)))];
+
+  useEffect(() => {
+    if (!isAddModalOpen && editingStockId === null) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        e.stopPropagation();
+        if (isAddModalOpen) setIsAddModalOpen(false);
+        if (editingStockId !== null) setEditingStockId(null);
+      }
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [isAddModalOpen, editingStockId]);
 
   const filteredProducts = store.catalog.filter(p => {
     const matchesSearch = p.name.toLowerCase().includes(searchTerm.toLowerCase()) || p.sku.toLowerCase().includes(searchTerm.toLowerCase());

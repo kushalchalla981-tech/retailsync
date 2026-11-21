@@ -105,6 +105,20 @@ export const App: React.FC = () => {
     return () => window.removeEventListener('keydown', onKey);
   }, []);
 
+  // Global Escape key coordinator: reliably closes any open modal/overlay
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key !== 'Escape') return;
+      if (creatorOpen) { setCreatorOpen(false); return; }
+      if (aboutOpen) { setAboutOpen(false); return; }
+      if (profileOpen) { setProfileOpen(false); return; }
+      if (searchOpen) { setSearchOpen(false); return; }
+      if (selected) { close(); return; }
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [creatorOpen, aboutOpen, profileOpen, searchOpen, selected, close]);
+
   /** Owner -> platform dashboard, creator -> store dashboard, visitor -> profile, signed out -> sign in. */
   const openProfile = useCallback(() => {
     if (role === 'owner' || role === 'creator') setDashboardOpen(true);

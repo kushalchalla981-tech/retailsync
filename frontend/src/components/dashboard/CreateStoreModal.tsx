@@ -55,6 +55,18 @@ export const CreateStoreModal: React.FC<CreateStoreModalProps> = ({ isOpen, onCl
   const [primaryColor, setPrimaryColor] = useState('#00e5ff');
   const [accentColor, setAccentColor] = useState('#7b4eff');
 
+  useEffect(() => {
+    if (!isOpen) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        e.stopPropagation();
+        onClose();
+      }
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [isOpen, onClose]);
+
   if (!isOpen) return null;
 
   const handleNameChange = (val: string) => {

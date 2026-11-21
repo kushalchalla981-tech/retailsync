@@ -62,7 +62,12 @@ export const ServiceLedgerModal: React.FC<{ service: Service | null; onClose: ()
 
   useEffect(() => {
     if (!service) return;
-    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose(); };
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        e.stopPropagation();
+        onClose();
+      }
+    };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
   }, [service, onClose]);
