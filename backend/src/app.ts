@@ -15,6 +15,7 @@ import { registerErrorHandling } from './http/contract.js';
 import { cartRoutes } from './routes/carts.js';
 import { catalogRoutes } from './routes/catalog.js';
 import { orderRoutes } from './routes/orders.js';
+import { paymentRoutes } from './routes/payments.js';
 import { searchRoutes } from './routes/search.js';
 import { corsHeaders, telemetryRoutes } from './routes/telemetry.js';
 import { disconnectKafka } from './services/kafka.js';
@@ -61,6 +62,7 @@ export function buildApp(options: BuildAppOptions): FastifyInstance {
   app.register(catalogRoutes, { prefix: '/api', db });
   app.register(cartRoutes, { prefix: '/api', db });
   app.register(orderRoutes, { prefix: '/api', db, orderEvents });
+  app.register(paymentRoutes, { prefix: '/api' });
   app.register(searchRoutes, { prefix: '/api' });
   app.register(telemetryRoutes, { prefix: '/api' });
 

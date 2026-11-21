@@ -10,6 +10,8 @@ node_modules/
 *.pem
 *.cert
 *.key
+*.csv
+rzp-test-key.csv
 
 # Build outputs
 dist/
